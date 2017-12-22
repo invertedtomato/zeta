@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard1.3</TargetFramework>
+    <AssemblyName>InvertedTomato.Zeta</AssemblyName>
+    <RootNamespace>InvertedTomato.Zeta</RootNamespace>
+  </PropertyGroup>
+
+</Project>

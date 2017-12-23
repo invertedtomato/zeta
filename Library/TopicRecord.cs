@@ -2,7 +2,7 @@
 
 namespace InvertedTomato.Zeta {
     public class TopicRecord {
-        public DateTime At { get; set; }
+        public DateTime LastSentAt { get; set; }
         public UInt16 Revision { get; set; }
         public Byte[] Packet { get; set; }
     }

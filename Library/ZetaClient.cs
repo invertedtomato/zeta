@@ -46,34 +46,40 @@ namespace InvertedTomato.Zeta {
             AnnounceTimer = new Timer(AnnounceTimer_OnTick, null, TimeSpan.Zero, AnnounceInterval);
         }
 
-        private void AnnounceTimer_OnTick(object o) {
+        private void AnnounceTimer_OnTick(Object o) {
             // Send token to keep the connection alive
             Socket.SendTo(Authorization, Endpoint);
         }
 
         private void ReceiveValue() {
+            if(IsDisposed) {
+                return;
+            }
+
             try {
                 var socketEventArg = new SocketAsyncEventArgs();
                 socketEventArg.RemoteEndPoint = Endpoint;
                 socketEventArg.SetBuffer(new Byte[ReceiveBufferSize], 0, ReceiveBufferSize);
-                socketEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(delegate (object s, SocketAsyncEventArgs e) {
+                socketEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(delegate (Object s, SocketAsyncEventArgs e) {
                     if(IsDisposed) {
                         return;
                     }
 
-                    if(e.SocketError != SocketError.Success) {
-                        OnSocketError(e.SocketError);
-                    } else {
-                        var topic = BitConverter.ToUInt64(e.Buffer, 0);
-                        var revision = BitConverter.ToUInt16(e.Buffer, 8);
-                        var value = new Byte[e.Count - 10];
-                        Buffer.BlockCopy(e.Buffer, 10, value, 0, value.Length);
+                    try {
+                        if(e.SocketError != SocketError.Success) {
+                            OnSocketError(e.SocketError);
+                        } else {
+                            var topic = BitConverter.ToUInt64(e.Buffer, 0);
+                            var revision = BitConverter.ToUInt16(e.Buffer, 8);
+                            var value = new Byte[e.BytesTransferred - 10];
+                            Buffer.BlockCopy(e.Buffer, 10, value, 0, value.Length);
 
-                        Handler(topic, revision, value);
+                            Handler(topic, revision, value);
+                        }
+                    } finally {
+                        // Restart receiving
+                        ReceiveValue();
                     }
-
-                    // Restart receiving
-                    ReceiveValue();
                 });
 
                 // Initiate receive
@@ -81,7 +87,7 @@ namespace InvertedTomato.Zeta {
             } catch(ObjectDisposedException) { }
         }
 
-        protected virtual void Dispose(bool disposing) {
+        protected virtual void Dispose(Boolean disposing) {
             if(IsDisposed) {
                 return;
             }

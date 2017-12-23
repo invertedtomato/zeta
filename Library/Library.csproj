@@ -6,4 +6,8 @@
     <RootNamespace>InvertedTomato.Zeta</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="System.Threading.Thread" Version="4.3.0" />
+  </ItemGroup>
+
 </Project>

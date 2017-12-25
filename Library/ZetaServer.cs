@@ -4,136 +4,201 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Linq;
+using System.Diagnostics;
 
 namespace InvertedTomato.Zeta {
     public class ZetaServer : IDisposable {
-        private readonly Func<EndPoint, Byte[], Boolean> SubscriberFilter;
-
         private readonly Socket Socket;
-        private readonly Thread PublishThread;
+        private readonly Thread SendThread;
+        private readonly Thread ReceiveThread;
         private readonly ConcurrentDictionary<UInt64, TopicRecord> TopicRecords = new ConcurrentDictionary<UInt64, TopicRecord>();
-        private readonly ConcurrentDictionary<EndPoint, ClientRecord> SubscriberRecords = new ConcurrentDictionary<EndPoint, ClientRecord>();
-        private readonly AutoResetEvent SpinLock = new AutoResetEvent(true);
+        private readonly ConcurrentDictionary<EndPoint, SubscriberRecord> SubscriberRecords = new ConcurrentDictionary<EndPoint, SubscriberRecord>();
+        private readonly AutoResetEvent SendLock = new AutoResetEvent(true);
         private readonly Object Sync = new Object();
 
-        private static readonly UInt16 ReceiveBufferSize = 1500;
-        private static readonly TimeSpan ExpectedAnnounceInterval = new TimeSpan(0, 0, 15);
+        private readonly Options Options;
 
-        /// <summary>
-        /// If a topic hasn't changed in this interval, retransmit it's value anyway.
-        /// </summary>
-        /// <remarks>
-        /// Useful if there's packet loss and the last publish was lost.
-        /// </remarks>
-        public TimeSpan RepublishInterval { get; set; } = new TimeSpan(0, 0, 15);
+
 
         /// <summary>
         /// Are we disposed and no longer doing anything.
         /// </summary>
         public Boolean IsDisposed { get; private set; }
 
+        public TimeSpan CurrentCoalesceDelay { get; private set; }
+        
 
-        public event Action<SocketError> OnSocketError;
+        /// <summary>
+        /// Create a new server using default options (recommended).
+        /// </summary>
+        /// <param name="port">UDP port to listen on.</param>
+        public ZetaServer(UInt16 port) : this(port, new Options()) { }
 
-        public ZetaServer(UInt16 port) : this(port, (endpoint, token) => { return true; }) { }
-
-        public ZetaServer(UInt16 port, Func<EndPoint, Byte[], Boolean> subscriberFilter) {
-            if(null == subscriberFilter) {
-                throw new ArgumentNullException(nameof(subscriberFilter));
+        /// <summary>
+        /// Create a new server with options
+        /// </summary>
+        /// <param name="port">UDP port to listen on.</param>
+        /// <param name="options">Custom options</param>
+        public ZetaServer(UInt16 port, Options options) {
+            if(null == options) {
+                throw new ArgumentNullException(nameof(options));
             }
 
             // Store params
-            SubscriberFilter = subscriberFilter;
+            Options = options;
 
             // Create and bind socket
             Socket = new Socket(SocketType.Dgram, ProtocolType.Udp);
+            Socket.SendBufferSize = Options.SendBufferSize;
+            Socket.ReceiveBufferSize = Options.ReceiveBufferSize;
+            Socket.ReceiveTimeout = 1000; // Only so that we can actually land the plane neatly at shutdown time
+            Socket.SendTimeout = 1; // The lowest possible value - if we're suffering from buffer backpressure we want to retry with fresh data later anyway
             //Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
             Socket.Bind(new IPEndPoint(IPAddress.Any, port));
 
-            // Seed receiving
-            ReceiveAnnounce(); // Only need one thread
+            // Start receiving
+            ReceiveThread = new Thread(ReceieveThread_OnSpin);
+            ReceiveThread.Start();
 
-            PublishThread = new Thread(PublishThread_OnSpin);
-            PublishThread.Start();
+            // Start sending
+            SendThread = new Thread(SendThread_OnSpin);
+            SendThread.Start();
         }
 
-        private void PublishThread_OnSpin(Object obj) {
+        private void ReceieveThread_OnSpin(Object obj) {
+            var buffer = new Byte[Options.Mtu];
+
             try {
                 while(!IsDisposed) {
-                    // Get list of active subscriber endpoints
-                    var subscriptionEndpoints = SubscriberRecords.Where(a => a.Value.SubscribedUntil >= DateTime.UtcNow).Select(a => a.Key).ToArray();
-
-                    // For each topic...
-                    foreach(var item in TopicRecords) {
-                        var record = item.Value;
-
-                        // If the topic is due to be published...
-                        if(record.LastSentAt <= DateTime.UtcNow.Subtract(RepublishInterval)) {
-                            // Send to each client..
-                            foreach(var endpoint in subscriptionEndpoints) {
-                                Socket.SendTo(record.Packet, endpoint);
-                            }
-
-                            // Update LastSent
-                            record.LastSentAt = DateTime.UtcNow;
+                    try {
+                        // Wait for packet to arrive
+                        var endpoint = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
+                        var len = Socket.ReceiveFrom(buffer, ref endpoint);
+                        if(len < 0) {
+                            Trace.TraceWarning($"SERVER-RECEIVE: Yielded {len}.");
+                            continue;
                         }
-                    }
 
-                    // Wait until there is a new publish, or there is likely  for a republish to be required
-                    SpinLock.WaitOne((Int32)(RepublishInterval.TotalMilliseconds / 2));
+                        // Check packet sanity
+                        if(len < Constants.CLIENTTXHEADER_LENGTH) {
+                            Trace.TraceWarning($"SERVER-RECEIVE: Received packet that is too small to be valid. Discarded.");
+                            continue;
+                        }
+                        if((len - Constants.CLIENTTXHEADER_LENGTH) % 10 > 0) {
+                            Trace.TraceWarning($"SERVER-RECEIVE: Received packet is not a valid length. Discarded.");
+                            continue;
+                        }
+
+                        // Check version
+                        var version = buffer[0];
+                        if(version != Constants.VERSION) {
+                            Trace.TraceWarning($"SERVER-RECEIVE: Received packet version does not match or is corrupted. Discarded.");
+                            continue;
+                        }
+
+                        // Check authorization token
+                        var authorizationToken = new Byte[16];
+                        Buffer.BlockCopy(buffer, 1, authorizationToken, 0, authorizationToken.Length);
+                        if(!Options.AuthorizationFilter(endpoint, authorizationToken)) {
+                            Trace.TraceWarning($"SERVER-RECEIVE: Received packet with rejected authorization token. Discarded.");
+                            continue;
+                        }
+
+                        // Find subscriber record
+                        if(SubscriberRecords.TryGetValue(endpoint, out var subscriberRecord)) {
+                            // Record exists, update authorizedAt
+                            subscriberRecord.LastAuthorizedAt = DateTime.UtcNow;
+
+                            // Process ACKs
+                            var pos = Constants.CLIENTTXHEADER_LENGTH;
+                            while(pos < len) {
+                                // Extract topic
+                                var topicId = BitConverter.ToUInt64(buffer, pos);
+
+                                // Extract revision
+                                var revision = BitConverter.ToUInt16(buffer, pos + 8);
+
+                                if(TopicRecords.TryGetValue(topicId, out var topicRecord)) {
+                                    if(topicRecord.Revision == revision) { // TODO Sync issue between this line and the one below!!!!!!
+                                        topicRecord.PendingSubscribers.TryRemove(endpoint, out var a);
+                                    }
+                                }
+
+                                pos += 10;
+                            }
+                        } else {
+                            // Record doesn't exist, created
+                            subscriberRecord = SubscriberRecords[endpoint] = new SubscriberRecord() {
+                                LastAuthorizedAt = DateTime.UtcNow
+                            };
+
+                            // Queue sending latest value from all topics
+                            foreach(var topicRecord in TopicRecords.Select(a => a.Value)) {
+                                topicRecord.PendingSubscribers[endpoint]=endpoint;
+                            }
+                        }
+
+                        
+                        // Remove all expired subscriptions  TODO - should be on a timer?
+                        var expiry = DateTime.UtcNow.Subtract(Options.KeepAliveInterval).Subtract(Options.KeepAiveGrace);
+                        foreach(var a in SubscriberRecords.Where(a => a.Value.LastAuthorizedAt < expiry).Select(a => a.Key)) {
+                            SubscriberRecords.TryRemove(a, out var record);
+                        }
+                    } catch(SocketException ex) {
+                        if(ex.SocketErrorCode == SocketError.TimedOut) {
+                            continue;
+                        }
+                        Trace.TraceWarning($"SERVER-RECEIVE: Socket error occured. {ex.Message}");
+                    }
                 }
             } catch(ObjectDisposedException) { }
         }
 
-        private void ReceiveAnnounce() {
+        private void SendThread_OnSpin(Object obj) {
+            var stopwatch = new Stopwatch();
             try {
-                var socketEventArg = new SocketAsyncEventArgs();
-                socketEventArg.RemoteEndPoint = new IPEndPoint(IPAddress.Any, 0); // Required in conjunction with ReceiveMessageFromAsync - ReceiveAsync does not report remote endpoint
-                socketEventArg.SetBuffer(new Byte[ReceiveBufferSize], 0, ReceiveBufferSize);
-                socketEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(delegate (Object s, SocketAsyncEventArgs e) {
-                    if(IsDisposed) {
-                        return;
-                    }
+                while(!IsDisposed) {
+                    try {
+                        // Get current time
+                        var now = DateTime.UtcNow;
 
-                    if(e.SocketError != SocketError.Success) {
-                        OnSocketError(e.SocketError);
-                    } else {
-                        // Extract authorization
-                        var authorization = new Byte[e.BytesTransferred];
-                        Buffer.BlockCopy(e.Buffer, 0, authorization, 0, authorization.Length);
+                        // Start calculating max delay before next run
+                        var next = Options.RetransmitInterval;
 
-                        // Check subscriber is approved
-                        if(SubscriberFilter(e.RemoteEndPoint, authorization)) {
-                            // Create new record if needed
-                            var renewal = true;
-                            if(!SubscriberRecords.TryGetValue(e.RemoteEndPoint, out var record)) {
-                                renewal = false;
-                                record = SubscriberRecords[e.RemoteEndPoint] = new ClientRecord();
-                            }
+                        // Start timing run
+                        stopwatch.Restart();
 
-                            // Update subscribed-until
-                            record.SubscribedUntil = DateTime.UtcNow.AddMilliseconds(ExpectedAnnounceInterval.TotalMilliseconds);
+                        // For each topic...
+                        foreach(var item in TopicRecords) {
+                            var record = item.Value;
 
-                            // If not a renewal, send all outsanding packets
-                            if(!renewal) {
-                                foreach(var packet in TopicRecords.Select(a => a.Value.Packet)) {
-                                    Socket.SendTo(packet, e.RemoteEndPoint);
+                            // If the topic is due to be published...
+                            var delta = record.SendAfter - now;
+                            if(delta.TotalMilliseconds < 0) {
+                                // Update the send-after for retransmits
+                                record.SendAfter = now.Add(Options.RetransmitInterval);
+
+                                // Send to each client..
+                                foreach(var endpoint in record.PendingSubscribers.Values) {
+                                    if(Socket.SendTo(record.Packet, endpoint) < 1) {
+                                        Trace.TraceWarning($"SERVER-SEND: Send buffer full, postponing send.");
+                                    }
                                 }
+                            } else if(delta < next) {
+                                next = delta;
                             }
                         }
 
-                        // Remove all expired subscriptions
-                        foreach(var a in SubscriberRecords.Where(a => a.Value.SubscribedUntil < DateTime.UtcNow).Select(a => a.Key)) {
-                            SubscriberRecords.TryRemove(a, out var record);
-                        }
+                        // Capture runtime
+                        stopwatch.Stop();
+                        CurrentCoalesceDelay = stopwatch.Elapsed;
+
+                        // Wait until there is a new publish, or there is likely  for a republish to be required
+                        SendLock.WaitOne(next);
+                    } catch(SocketException ex) {
+                        Trace.TraceWarning($"SERVER-SEND: Socket error occured. {ex.Message}");
                     }
-
-                    // Restart receiving
-                    ReceiveAnnounce();
-                });
-
-                // Initiate receive
-                Socket.ReceiveMessageFromAsync(socketEventArg);
+                }
             } catch(ObjectDisposedException) { }
         }
 
@@ -143,10 +208,9 @@ namespace InvertedTomato.Zeta {
                 TopicRecords.TryRemove(topic, out var a);
                 return;
             }
-
-            // TODO: Handle buffer sizes more smartly, and make them customisable?
-            if(value.Length > ReceiveBufferSize - 10) {
-                throw new ArgumentOutOfRangeException(nameof(value), $"Value must not exceed ReceiveBufferSize {ReceiveBufferSize}."); // TODO: Tidy
+            
+            if(value.Length + Constants.SERVERTXHEADER_LENGTH > Options.Mtu) {
+                Trace.TraceWarning($"SERVER-PUBLISH: Publish value length exceeds MTU set in options and will probably be dropped by the network. Sending anyway. ([Header]{Constants.SERVERTXHEADER_LENGTH} + [Value]{value.Length} > [MTU]{Options.Mtu})");
             }
 
             lock(Sync) {
@@ -162,17 +226,17 @@ namespace InvertedTomato.Zeta {
                 }
 
                 // Compose packet
-                var packet = new Byte[value.Length + 10];
-                Buffer.BlockCopy(BitConverter.GetBytes(topic), 0, packet, 0, 8);
-                Buffer.BlockCopy(BitConverter.GetBytes(record.Revision), 0, packet, 8, 2);
-                Buffer.BlockCopy(value, 0, packet, 10, value.Length);
+                record.Packet = new Byte[Constants.SERVERTXHEADER_LENGTH + value.Length];
+                Buffer.BlockCopy(BitConverter.GetBytes(topic), 0, record.Packet, 0, 8);             // UInt64 topic
+                Buffer.BlockCopy(BitConverter.GetBytes(record.Revision), 0, record.Packet, 8, 2);   // UInt16 revision
+                Buffer.BlockCopy(value, 0, record.Packet, 10, value.Length);                        // Byte[?] value
 
-                // Update record
-                record.Packet = packet;
-                record.LastSentAt = DateTime.MinValue;
+                // Reset subscriber lists
+                record.PendingSubscribers = new ConcurrentDictionary<EndPoint, EndPoint>(SubscriberRecords.ToDictionary(a=>a.Key, a=>a.Key));
+                record.SendAfter = DateTime.MinValue;
 
                 // Release lock
-                SpinLock.Set();
+                SendLock.Set();
             }
         }
 
@@ -186,10 +250,10 @@ namespace InvertedTomato.Zeta {
                 if(disposing) {
                     // Dispose managed state (managed objects).
                     Socket?.Dispose();
-                    PublishThread?.Join();
+                    SendThread?.Join();
+                    ReceiveThread?.Join();
                 }
 
-                // Free unmanaged resources (unmanaged objects) and override a finalizer below.
                 // Set large fields to null.
             }
         }

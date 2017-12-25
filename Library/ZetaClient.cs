@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
 using System.Threading;
@@ -6,25 +7,25 @@ using System.Threading;
 namespace InvertedTomato.Zeta {
     public class ZetaClient : IDisposable {
         private readonly IPEndPoint Endpoint;
-        private readonly Byte[] Authorization;
         private readonly Action<UInt64, UInt16, Byte[]> Handler;
         private readonly Socket Socket;
-        private readonly Timer AnnounceTimer;
+        private readonly Thread ReceiveThread;
+
+        private readonly Options Options;
 
         public Boolean IsDisposed { get; private set; }
-        public event Action<SocketError> OnSocketError;
 
-        private static readonly TimeSpan AnnounceInterval = new TimeSpan(0, 0, 5);
-        private static readonly UInt16 ReceiveBufferSize = 1500;
+        public ZetaClient(IPEndPoint endpoint, Action<UInt64, UInt16, Byte[]> handler) : this(endpoint, new Options(), handler) { }
 
-        public ZetaClient(IPEndPoint endpoint, Action<UInt64, UInt16, Byte[]> handler) : this(endpoint, new Byte[] { }, handler) { }
-
-        public ZetaClient(IPEndPoint endpoint, Byte[] authorization, Action<UInt64, UInt16, Byte[]> handler) {
+        public ZetaClient(IPEndPoint endpoint, Options options, Action<UInt64, UInt16, Byte[]> handler) {
             if(null == endpoint) {
                 throw new ArgumentNullException(nameof(endpoint));
             }
-            if(null == authorization) {
-                throw new ArgumentNullException(nameof(authorization));
+            if(null == options) {
+                throw new ArgumentNullException(nameof(options));
+            }
+            if(16 != options.AuthorizationToken.Length) {
+                throw new ArgumentOutOfRangeException(nameof(options.AuthorizationToken), "Must be exactly 16 bytes long.");
             }
             if(null == handler) {
                 throw new ArgumentNullException(nameof(handler));
@@ -32,60 +33,69 @@ namespace InvertedTomato.Zeta {
 
             // Store params
             Endpoint = endpoint;
-            Authorization = authorization;
+            Options = options;
             Handler = handler;
 
             // Create and bind socket
-            Socket = new Socket(SocketType.Dgram, ProtocolType.Udp);
+            Socket = new Socket(SocketType.Dgram, ProtocolType.Udp); Socket.SendBufferSize = Options.SendBufferSize;
+            Socket.ReceiveBufferSize = Options.ReceiveBufferSize;
+            Socket.ReceiveTimeout = 1000; // Only so that we can actually land the plane neatly at shutdown time
+            Socket.SendTimeout = 1; // The lowest possible value - if we're suffering from buffer backpressure we want to retry with fresh data later anyway
             Socket.Bind(new IPEndPoint(IPAddress.Any, 0));
 
-            // Seed receiving
-            ReceiveValue(); // If receive performance isn't good enough we could call this multiple times to inrease the receive-pool size
-
-            // Setup announce timer
-            AnnounceTimer = new Timer(AnnounceTimer_OnTick, null, TimeSpan.Zero, AnnounceInterval);
+            // Start receiving
+            ReceiveThread = new Thread(ReceieveThread_OnSpin);
+            ReceiveThread.Start();
         }
 
-        private void AnnounceTimer_OnTick(Object o) {
-            // Send token to keep the connection alive
-            Socket.SendTo(Authorization, Endpoint);
-        }
-
-        private void ReceiveValue() {
-            if(IsDisposed) {
-                return;
-            }
-
+        private void ReceieveThread_OnSpin(Object obj) {
+            var lastAck = DateTime.MinValue;
             try {
-                var socketEventArg = new SocketAsyncEventArgs();
-                socketEventArg.RemoteEndPoint = Endpoint;
-                socketEventArg.SetBuffer(new Byte[ReceiveBufferSize], 0, ReceiveBufferSize);
-                socketEventArg.Completed += new EventHandler<SocketAsyncEventArgs>(delegate (Object s, SocketAsyncEventArgs e) {
-                    if(IsDisposed) {
-                        return;
-                    }
-
+                while(!IsDisposed) {
                     try {
-                        if(e.SocketError != SocketError.Success) {
-                            OnSocketError(e.SocketError);
-                        } else {
-                            var topic = BitConverter.ToUInt64(e.Buffer, 0);
-                            var revision = BitConverter.ToUInt16(e.Buffer, 8);
-                            var value = new Byte[e.BytesTransferred - 10];
-                            Buffer.BlockCopy(e.Buffer, 10, value, 0, value.Length);
-
-                            Handler(topic, revision, value);
+                        // Receive packet
+                        var endpoint = (EndPoint)Endpoint;
+                        var buffer = new Byte[1500];
+                        var len = Socket.ReceiveFrom(buffer, ref endpoint);
+                        if(len < 1) {
+                            Trace.TraceWarning($"CLIENT-RECEIVE: Yielded {len}.");
+                            continue;
                         }
-                    } finally {
-                        // Restart receiving
-                        ReceiveValue();
-                    }
-                });
 
-                // Initiate receive
-                Socket.ReceiveFromAsync(socketEventArg);
+                        // Read packet
+                        var topicId = BitConverter.ToUInt64(buffer, 0);
+                        var revision = BitConverter.ToUInt16(buffer, 8);
+                        var value = new Byte[len - 10];
+                        Buffer.BlockCopy(buffer, 10, value, 0, value.Length);
+
+                        // ACK packet // TODO: possible to batch ACKs
+                        var packet = new Byte[Constants.CLIENTTXHEADER_LENGTH + 10];
+                        packet[0] = Constants.VERSION;
+                        Buffer.BlockCopy(Options.AuthorizationToken, 0, packet, 1, 16);
+                        Buffer.BlockCopy(buffer, 0, packet, 17, 10);
+                        Socket.SendTo(packet, Endpoint);
+                        lastAck = DateTime.UtcNow;
+
+                        // Fire handler
+                        Handler(topicId, revision, value);
+                    } catch(SocketException ex) {
+                        if(ex.SocketErrorCode == SocketError.TimedOut) {
+                            if((DateTime.UtcNow - lastAck) > Options.KeepAliveInterval) {
+                                var b = new Byte[Constants.CLIENTTXHEADER_LENGTH];
+                                b[0] = Constants.VERSION;
+                                Buffer.BlockCopy(Options.AuthorizationToken, 0, b, 1, 16);
+                                Socket.SendTo(b, Endpoint);
+                                lastAck = DateTime.UtcNow;
+                            }
+                            continue;
+                        }
+                        Trace.TraceWarning($"CLIENT-RECEIVE: Socket error occured. {ex.Message}");
+                    }
+                }
             } catch(ObjectDisposedException) { }
         }
+
+
 
         protected virtual void Dispose(Boolean disposing) {
             if(IsDisposed) {
@@ -95,13 +105,13 @@ namespace InvertedTomato.Zeta {
             IsDisposed = true;
 
             if(disposing) {
-                // Dispose managed state (managed objects).
-                AnnounceTimer?.Dispose();
+                // Dispose managed state (managed objects)
+                ReceiveThread?.Join();
                 Socket?.Dispose();
             }
 
-            // Free unmanaged resources (unmanaged objects) and override a finalizer below.
-            // Set large fields to null.
+            // Free unmanaged resources (unmanaged objects) and override a finalizer below
+            // Set large fields to null
 
         }
 

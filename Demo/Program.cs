@@ -35,7 +35,12 @@ namespace Demo {
             }
 
             Console.ForegroundColor = ConsoleColor.White;
+            Console.WriteLine("Killing client.");
+            client.Dispose();
+            
+            Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("Done.");
+            
             Console.ReadKey(true);
         }
     }

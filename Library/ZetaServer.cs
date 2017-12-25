@@ -84,6 +84,13 @@ namespace InvertedTomato.Zeta {
             try {
                 while(!IsDisposed) {
                     try {
+                        // Remove all expired subscriptions  TODO - should be on a timer?
+                        var expiry = DateTime.UtcNow.Subtract(Options.KeepAliveInterval).Subtract(Options.KeepAiveGrace);
+                        foreach(var a in SubscriberRecords.Where(a => a.Value.LastAuthorizedAt < expiry).Select(a => a.Key)) {
+                            SubscriberRecords.TryRemove(a, out var record);
+                            Trace.TraceInformation($"SERVER-RECEIVE: {a} Subscription expired.");
+                        }
+
                         // Wait for packet to arrive
                         var endpoint = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
                         var len = Socket.ReceiveFrom(buffer, ref endpoint);
@@ -156,13 +163,6 @@ namespace InvertedTomato.Zeta {
                             foreach(var topicRecord in TopicRecords.Select(a => a.Value)) {
                                 topicRecord.PendingSubscribers[endpoint]=endpoint;
                             }
-                        }
-
-                        
-                        // Remove all expired subscriptions  TODO - should be on a timer?
-                        var expiry = DateTime.UtcNow.Subtract(Options.KeepAliveInterval).Subtract(Options.KeepAiveGrace);
-                        foreach(var a in SubscriberRecords.Where(a => a.Value.LastAuthorizedAt < expiry).Select(a => a.Key)) {
-                            SubscriberRecords.TryRemove(a, out var record);
                         }
                     } catch(SocketException ex) {
                         if(ex.SocketErrorCode == SocketError.TimedOut) {

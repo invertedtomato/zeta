@@ -6,11 +6,28 @@ using System.Threading;
 using System.Linq;
 using System.Diagnostics;
 
+// TODO: search for TODOs. 
+
 namespace InvertedTomato.Zeta {
     public class ZetaServer : IDisposable {
+        /// <summary>
+        /// Underlying UDP socket
+        /// </summary>
         private readonly Socket Socket;
+
+        /// <summary>
+        /// Thread sending packets.
+        /// </summary>
         private readonly Thread SendThread;
+
+        /// <summary>
+        /// Thread processing acknowledgements.
+        /// </summary>
         private readonly Thread ReceiveThread;
+
+        /// <summary>
+        /// Topics
+        /// </summary>
         private readonly ConcurrentDictionary<UInt64, TopicRecord> TopicRecords = new ConcurrentDictionary<UInt64, TopicRecord>();
         private readonly ConcurrentDictionary<EndPoint, SubscriberRecord> SubscriberRecords = new ConcurrentDictionary<EndPoint, SubscriberRecord>();
         private readonly AutoResetEvent SendLock = new AutoResetEvent(true);
@@ -26,20 +43,17 @@ namespace InvertedTomato.Zeta {
         public Boolean IsDisposed { get; private set; }
 
         public TimeSpan CurrentCoalesceDelay { get; private set; }
-        
+
+
+        public ZetaServer(UInt16 port) : this(new IPEndPoint(IPAddress.Any, port), new Options()) { }
+        public ZetaServer(EndPoint endpoint) : this(endpoint, new Options()) { }
 
         /// <summary>
-        /// Create a new server using default options (recommended).
+        /// Create a new server.
         /// </summary>
-        /// <param name="port">UDP port to listen on.</param>
-        public ZetaServer(UInt16 port) : this(port, new Options()) { }
-
-        /// <summary>
-        /// Create a new server with options
-        /// </summary>
-        /// <param name="port">UDP port to listen on.</param>
+        /// <param name="endpoint">IP and port to listen on</param>
         /// <param name="options">Custom options</param>
-        public ZetaServer(UInt16 port, Options options) {
+        public ZetaServer(EndPoint endpoint, Options options) {
             if(null == options) {
                 throw new ArgumentNullException(nameof(options));
             }
@@ -53,8 +67,7 @@ namespace InvertedTomato.Zeta {
             Socket.ReceiveBufferSize = Options.ReceiveBufferSize;
             Socket.ReceiveTimeout = 1000; // Only so that we can actually land the plane neatly at shutdown time
             Socket.SendTimeout = 1; // The lowest possible value - if we're suffering from buffer backpressure we want to retry with fresh data later anyway
-            //Socket.SetSocketOption(SocketOptionLevel.IP, SocketOptionName.PacketInformation, true);
-            Socket.Bind(new IPEndPoint(IPAddress.Any, port));
+            Socket.Bind(endpoint);
 
             // Start receiving
             ReceiveThread = new Thread(ReceieveThread_OnSpin);
@@ -75,24 +88,24 @@ namespace InvertedTomato.Zeta {
                         var endpoint = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
                         var len = Socket.ReceiveFrom(buffer, ref endpoint);
                         if(len < 0) {
-                            Trace.TraceWarning($"SERVER-RECEIVE: Yielded {len}.");
+                            Trace.TraceWarning($"SERVER-RECEIVE: {endpoint} Strange byte count {len}.");
                             continue;
                         }
 
                         // Check packet sanity
                         if(len < Constants.CLIENTTXHEADER_LENGTH) {
-                            Trace.TraceWarning($"SERVER-RECEIVE: Received packet that is too small to be valid. Discarded.");
+                            Trace.TraceWarning($"SERVER-RECEIVE: {endpoint} Received packet that is too small to be valid. Discarded.");
                             continue;
                         }
                         if((len - Constants.CLIENTTXHEADER_LENGTH) % 10 > 0) {
-                            Trace.TraceWarning($"SERVER-RECEIVE: Received packet is not a valid length. Discarded.");
+                            Trace.TraceWarning($"SERVER-RECEIVE: {endpoint} Received packet is not a valid length. Discarded.");
                             continue;
                         }
 
                         // Check version
                         var version = buffer[0];
                         if(version != Constants.VERSION) {
-                            Trace.TraceWarning($"SERVER-RECEIVE: Received packet version does not match or is corrupted. Discarded.");
+                            Trace.TraceWarning($"SERVER-RECEIVE: {endpoint} Received packet version does not match or is corrupted. Discarded.");
                             continue;
                         }
 
@@ -100,7 +113,7 @@ namespace InvertedTomato.Zeta {
                         var authorizationToken = new Byte[16];
                         Buffer.BlockCopy(buffer, 1, authorizationToken, 0, authorizationToken.Length);
                         if(!Options.AuthorizationFilter(endpoint, authorizationToken)) {
-                            Trace.TraceWarning($"SERVER-RECEIVE: Received packet with rejected authorization token. Discarded.");
+                            Trace.TraceWarning($"SERVER-RECEIVE: {endpoint} Received packet with rejected authorization token. Discarded.");
                             continue;
                         }
 
@@ -111,14 +124,21 @@ namespace InvertedTomato.Zeta {
 
                             // Process ACKs
                             var pos = Constants.CLIENTTXHEADER_LENGTH;
+                            if(pos == len) {
+                                Trace.TraceInformation($"SERVER-RECEIVE: {endpoint} Sent keep-alive.");
+                            }
                             while(pos < len) {
                                 // Extract topic
-                                var topicId = BitConverter.ToUInt64(buffer, pos);
+                                var topic = BitConverter.ToUInt64(buffer, pos);
 
                                 // Extract revision
                                 var revision = BitConverter.ToUInt16(buffer, pos + 8);
 
-                                if(TopicRecords.TryGetValue(topicId, out var topicRecord)) {
+#if DEBUG
+                                Trace.TraceInformation($"SERVER-RECEIVE: {endpoint} Acknowledged {topic}#{revision}.");
+#endif
+
+                                if(TopicRecords.TryGetValue(topic, out var topicRecord)) {
                                     if(topicRecord.Revision == revision) { // TODO Sync issue between this line and the one below!!!!!!
                                         topicRecord.PendingSubscribers.TryRemove(endpoint, out var a);
                                     }

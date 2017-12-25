@@ -28,11 +28,10 @@ namespace Demo {
             server.Publish(1, new Byte[] { 0 });
             server.Publish(1, new Byte[] { 1 });
             server.Publish(2, new Byte[] { 255 });
-            server.Publish(1, new Byte[] { 2 });
 
-            for(byte i = 3; i < 100; i++) {
-                Thread.Sleep(rnd.Next(0, 2000));
+            for(byte i = 2; i <= 50; i++) {
                 server.Publish(1, new byte[] { i });
+                Thread.Sleep(rnd.Next(0, 1000));
             }
 
             Console.ForegroundColor = ConsoleColor.White;

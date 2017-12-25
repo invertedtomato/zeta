@@ -6,20 +6,41 @@ using System.Threading;
 
 namespace InvertedTomato.Zeta {
     public class ZetaClient : IDisposable {
-        private readonly IPEndPoint Endpoint;
+        /// <summary>
+        /// Server to communicate with
+        /// </summary>
+        private readonly IPEndPoint Server;
+
+        /// <summary>
+        /// Handler to pass received values to.
+        /// </summary>
         private readonly Action<UInt64, UInt16, Byte[]> Handler;
+
+        /// <summary>
+        /// Underlying UDP socket.
+        /// </summary>
         private readonly Socket Socket;
+
+        /// <summary>
+        /// Main thread
+        /// </summary>
         private readonly Thread ReceiveThread;
 
+        /// <summary>
+        /// User-provided options
+        /// </summary>
         private readonly Options Options;
 
+        /// <summary>
+        /// If the client is disposed and no longer operable.
+        /// </summary>
         public Boolean IsDisposed { get; private set; }
 
-        public ZetaClient(IPEndPoint endpoint, Action<UInt64, UInt16, Byte[]> handler) : this(endpoint, new Options(), handler) { }
+        public ZetaClient(IPEndPoint server, Action<UInt64, UInt16, Byte[]> handler) : this(server, new Options(), handler) { }
 
-        public ZetaClient(IPEndPoint endpoint, Options options, Action<UInt64, UInt16, Byte[]> handler) {
-            if(null == endpoint) {
-                throw new ArgumentNullException(nameof(endpoint));
+        public ZetaClient(IPEndPoint server, Options options, Action<UInt64, UInt16, Byte[]> handler) {
+            if(null == server) {
+                throw new ArgumentNullException(nameof(server));
             }
             if(null == options) {
                 throw new ArgumentNullException(nameof(options));
@@ -32,7 +53,7 @@ namespace InvertedTomato.Zeta {
             }
 
             // Store params
-            Endpoint = endpoint;
+            Server = server;
             Options = options;
             Handler = handler;
 
@@ -54,39 +75,46 @@ namespace InvertedTomato.Zeta {
                 while(!IsDisposed) {
                     try {
                         // Receive packet
-                        var endpoint = (EndPoint)Endpoint;
-                        var buffer = new Byte[1500];
+                        var endpoint = (EndPoint)Server;
+                        var buffer = new Byte[Options.Mtu];
                         var len = Socket.ReceiveFrom(buffer, ref endpoint);
                         if(len < 1) {
-                            Trace.TraceWarning($"CLIENT-RECEIVE: Yielded {len}.");
+                            Trace.TraceWarning($"CLIENT-RECEIVE: Strange byte count {len}.");
                             continue;
                         }
 
-                        // Read packet
-                        var topicId = BitConverter.ToUInt64(buffer, 0);
+                        // Decode packet
+                        var topic = BitConverter.ToUInt64(buffer, 0);
                         var revision = BitConverter.ToUInt16(buffer, 8);
                         var value = new Byte[len - 10];
                         Buffer.BlockCopy(buffer, 10, value, 0, value.Length);
 
-                        // ACK packet // TODO: possible to batch ACKs
+                        // Send acknowledgement packet  FUTURE: batch ACK packets?
                         var packet = new Byte[Constants.CLIENTTXHEADER_LENGTH + 10];
                         packet[0] = Constants.VERSION;
                         Buffer.BlockCopy(Options.AuthorizationToken, 0, packet, 1, 16);
                         Buffer.BlockCopy(buffer, 0, packet, 17, 10);
-                        Socket.SendTo(packet, Endpoint);
+                        Socket.SendTo(packet, Server);
                         lastAck = DateTime.UtcNow;
 
                         // Fire handler
-                        Handler(topicId, revision, value);
+                        Handler(topic, revision, value);
                     } catch(SocketException ex) {
+                        // If nothing has been received recently...
                         if(ex.SocketErrorCode == SocketError.TimedOut) {
+                            // If we are outside of the keep-alive window...
                             if((DateTime.UtcNow - lastAck) > Options.KeepAliveInterval) {
-                                var b = new Byte[Constants.CLIENTTXHEADER_LENGTH];
-                                b[0] = Constants.VERSION;
-                                Buffer.BlockCopy(Options.AuthorizationToken, 0, b, 1, 16);
-                                Socket.SendTo(b, Endpoint);
+                                // Send keep-alive packet
+                                var packet = new Byte[Constants.CLIENTTXHEADER_LENGTH];
+                                packet[0] = Constants.VERSION;
+                                Buffer.BlockCopy(Options.AuthorizationToken, 0, packet, 1, 16);
+                                Socket.SendTo(packet, Server);
                                 lastAck = DateTime.UtcNow;
+
+                                Trace.TraceInformation($"CLIENT-RECEIVE: Keep-alive sent.");
                             }
+
+                            // No need to report this
                             continue;
                         }
                         Trace.TraceWarning($"CLIENT-RECEIVE: Socket error occured. {ex.Message}");
@@ -94,8 +122,6 @@ namespace InvertedTomato.Zeta {
                 }
             } catch(ObjectDisposedException) { }
         }
-
-
 
         protected virtual void Dispose(Boolean disposing) {
             if(IsDisposed) {
@@ -112,7 +138,6 @@ namespace InvertedTomato.Zeta {
 
             // Free unmanaged resources (unmanaged objects) and override a finalizer below
             // Set large fields to null
-
         }
 
         public void Dispose() {

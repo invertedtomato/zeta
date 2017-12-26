@@ -24,13 +24,26 @@ namespace InvertedTomato.Zeta {
         /// </summary>
         private readonly Socket Socket;
 
+        /// <summary>
+        /// Thread handing data receipt.
+        /// </summary>
         private readonly Thread ReceiveThread;
+
+        /// <summary>
+        /// Thread handling data transmission.
+        /// </summary>
         private readonly Thread SendThread;
+        
+        /// <summary>
+        /// Lock preventing send thread busy-spinning.
+        /// </summary>
+        private readonly AutoResetEvent SendLock = new AutoResetEvent(true);
 
+        /// <summary>
+        /// Acknowledgements which are pending being sent back to the server
+        /// </summary>
         private readonly ConcurrentQueue<KeyValuePair<UInt64, UInt16>> AcknowledgementsPending = new ConcurrentQueue<KeyValuePair<ulong, ushort>>();
-        private readonly AutoResetEvent AcknowledgementsLock = new AutoResetEvent(true);
-
-
+        
         /// <summary>
         /// User-provided options
         /// </summary>
@@ -72,7 +85,7 @@ namespace InvertedTomato.Zeta {
             Socket.Ttl = options.Ttl;
             Socket.Bind(new IPEndPoint(IPAddress.Any, 0));
 
-            // Start receiving
+            // Start sending
             SendThread = new Thread(SendThread_OnSpin);
             SendThread.Start();
 
@@ -86,12 +99,12 @@ namespace InvertedTomato.Zeta {
                 while(!IsDisposed) {
                     try {
                         // Wait for the next acknowledgement, or keep-alive interval - whichever is sooner
-                        AcknowledgementsLock.WaitOne(Options.KeepAliveInterval);
+                        SendLock.WaitOne(Options.KeepAliveInterval);
 
                         // Get pending acknowledgements, skipping duplicates
                         var pending = new Dictionary<UInt64, UInt16>();
                         while(AcknowledgementsPending.TryDequeue(out var item)) {
-                            pending[item.Key] = item.Value; // TODO: Out of order packet issue!! Make sure to send the newest revision no
+                            pending[item.Key] = item.Value; // There's no out-of-order issue here, as the updates were filtered as they arrived
                         }
 
                         // Compose header
@@ -159,7 +172,7 @@ namespace InvertedTomato.Zeta {
 
                             // Queue acknowledgement
                             AcknowledgementsPending.Enqueue(new KeyValuePair<ulong, ushort>(topic, revision));
-                            AcknowledgementsLock.Set();
+                            SendLock.Set();
 
                             // Fire handler
                             Handler(topic, revision, value);

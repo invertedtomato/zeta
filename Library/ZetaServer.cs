@@ -7,7 +7,6 @@ using System.Linq;
 using System.Diagnostics;
 
 // TODO: search for TODOs. 
-// TODO: client only return topic when it changes AND only if it's newer (out of order packet problem!)
 
 namespace InvertedTomato.Zeta {
     public class ZetaServer : IDisposable {

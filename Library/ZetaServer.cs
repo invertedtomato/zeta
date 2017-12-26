@@ -68,6 +68,9 @@ namespace InvertedTomato.Zeta {
             Socket.ReceiveBufferSize = Options.ReceiveBufferSize;
             Socket.ReceiveTimeout = 1000; // Only so that we can actually land the plane neatly at shutdown time
             Socket.SendTimeout = 1; // The lowest possible value - if we're suffering from buffer backpressure we want to retry with fresh data later anyway
+            Socket.DualMode = true;
+            Socket.ExclusiveAddressUse = true;
+            Socket.Ttl = options.Ttl;
             Socket.Bind(endpoint);
 
             // Start receiving
@@ -266,13 +269,14 @@ namespace InvertedTomato.Zeta {
                 IsDisposed = true;
 
                 if(disposing) {
-                    // Dispose managed state (managed objects).
-                    Socket?.Dispose();
+                    // Dispose managed state (managed objects)
                     SendThread?.Join();
                     ReceiveThread?.Join();
+                    Socket?.Shutdown(SocketShutdown.Both);
+                    Socket?.Dispose();
                 }
 
-                // Set large fields to null.
+                // Set large fields to null
             }
         }
 

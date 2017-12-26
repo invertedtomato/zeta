@@ -63,5 +63,13 @@ namespace InvertedTomato.Zeta {
         /// This should be at least the round-trip-time on the network.
         /// </remarks>
         public TimeSpan RetransmitInterval { get; set; } = new TimeSpan(0, 0, 0, 0, 250);
+
+        /// <summary>
+        /// Time to live - the maximum number of router hops the packet can transverse before being dropped.
+        /// </summary>
+        /// <remarks>
+        /// Only change this is you have a specific reason and you know what you're doing.
+        /// </remarks>
+        public Int16 Ttl { get; set; }=32;
     }
 }

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Diagnostics;
 
 // TODO: search for TODOs. 
+// TODO: client only return topic when it changes AND only if it's newer (out of order packet problem!)
 
 namespace InvertedTomato.Zeta {
     public class ZetaServer : IDisposable {
@@ -86,33 +87,33 @@ namespace InvertedTomato.Zeta {
                     try {
                         // Remove all expired subscriptions  TODO - should be on a timer?
                         var expiry = DateTime.UtcNow.Subtract(Options.KeepAliveInterval).Subtract(Options.KeepAiveGrace);
-                        foreach(var a in SubscriberRecords.Where(a => a.Value.LastAuthorizedAt < expiry).Select(a => a.Key)) {
-                            SubscriberRecords.TryRemove(a, out var record);
-                            Trace.TraceInformation($"SERVER-RECEIVE: {a} Subscription expired.");
+                        foreach(var ep in SubscriberRecords.Where(a => a.Value.LastAuthorizedAt < expiry).Select(a => a.Key)) {
+                            SubscriberRecords.TryRemove(ep, out var record);
+                            Trace.WriteLine($"{ep} Subscription expired.", "server-receive");
                         }
 
                         // Wait for packet to arrive
                         var endpoint = (EndPoint)new IPEndPoint(IPAddress.Any, 0);
                         var len = Socket.ReceiveFrom(buffer, ref endpoint);
-                        if(len < 0) {
-                            Trace.TraceWarning($"SERVER-RECEIVE: {endpoint} Strange byte count {len}.");
+                        if(len < 1) {
+                            Trace.WriteLine($"Strange byte count {len}.", "server-receive-warning");
                             continue;
                         }
 
                         // Check packet sanity
                         if(len < Constants.CLIENTTXHEADER_LENGTH) {
-                            Trace.TraceWarning($"SERVER-RECEIVE: {endpoint} Received packet that is too small to be valid. Discarded.");
+                            Trace.WriteLine($"{endpoint} Received packet that is too small to be valid. Discarded.", "server-receive");
                             continue;
                         }
                         if((len - Constants.CLIENTTXHEADER_LENGTH) % 10 > 0) {
-                            Trace.TraceWarning($"SERVER-RECEIVE: {endpoint} Received packet is not a valid length. Discarded.");
+                            Trace.WriteLine($"{endpoint} Received packet is not a valid length. Discarded.", "server-receive");
                             continue;
                         }
 
                         // Check version
                         var version = buffer[0];
                         if(version != Constants.VERSION) {
-                            Trace.TraceWarning($"SERVER-RECEIVE: {endpoint} Received packet version does not match or is corrupted. Discarded.");
+                            Trace.WriteLine($"{endpoint} Received packet version does not match or is corrupted. Discarded.", "server-receive");
                             continue;
                         }
 
@@ -120,7 +121,7 @@ namespace InvertedTomato.Zeta {
                         var authorizationToken = new Byte[16];
                         Buffer.BlockCopy(buffer, 1, authorizationToken, 0, authorizationToken.Length);
                         if(!Options.AuthorizationFilter(endpoint, authorizationToken)) {
-                            Trace.TraceWarning($"SERVER-RECEIVE: {endpoint} Received packet with rejected authorization token. Discarded.");
+                            Trace.WriteLine($"{endpoint} Received packet with rejected authorization token. Discarded.", "server-receive");
                             continue;
                         }
 
@@ -132,7 +133,7 @@ namespace InvertedTomato.Zeta {
                             // Process ACKs
                             var pos = Constants.CLIENTTXHEADER_LENGTH;
                             if(pos == len) {
-                                Trace.TraceInformation($"SERVER-RECEIVE: {endpoint} Sent keep-alive.");
+                                Trace.WriteLine($"{endpoint} Sent keep-alive.", "server-receive");
                             }
                             while(pos < len) {
                                 // Extract topic
@@ -141,9 +142,7 @@ namespace InvertedTomato.Zeta {
                                 // Extract revision
                                 var revision = BitConverter.ToUInt16(buffer, pos + 8);
 
-#if DEBUG
-                                Trace.TraceInformation($"SERVER-RECEIVE: {endpoint} Acknowledged {topic}#{revision}.");
-#endif
+                                Trace.WriteLine($"{endpoint} Acknowledged {topic}#{revision}.", "server-receive");
 
                                 if(TopicRecords.TryGetValue(topic, out var topicRecord)) {
                                     if(topicRecord.Revision == revision) { // TODO Sync issue between this line and the one below!!!!!!
@@ -156,19 +155,19 @@ namespace InvertedTomato.Zeta {
                         } else {
                             // Record doesn't exist, created
                             subscriberRecord = SubscriberRecords[endpoint] = new SubscriberRecord() {
-                                LastAuthorizedAt = DateTime.UtcNow
+                                LastAuthorizedAt = DateTime.UtcNow,
                             };
 
                             // Queue sending latest value from all topics
                             foreach(var topicRecord in TopicRecords.Select(a => a.Value)) {
-                                topicRecord.PendingSubscribers[endpoint]=endpoint;
+                                topicRecord.PendingSubscribers[endpoint] = endpoint;
                             }
                         }
                     } catch(SocketException ex) {
                         if(ex.SocketErrorCode == SocketError.TimedOut) {
                             continue;
                         }
-                        Trace.TraceWarning($"SERVER-RECEIVE: Socket error occured. {ex.Message}");
+                        Trace.WriteLine($"Socket error {ex.SocketErrorCode}.", "server-receive-warning");
                     }
                 }
             } catch(ObjectDisposedException) { }
@@ -200,9 +199,8 @@ namespace InvertedTomato.Zeta {
 
                                 // Send to each client..
                                 foreach(var endpoint in record.PendingSubscribers.Values) {
-                                    if(Socket.SendTo(record.Packet, endpoint) < 1) {
-                                        Trace.TraceWarning($"SERVER-SEND: Send buffer full, postponing send.");
-                                    }
+                                    var len = Socket.SendTo(record.Packet, endpoint);
+                                    Trace.WriteLineIf(len != record.Packet.Length, $"Strange byte count {len}.", "server-send-warning");
                                 }
                             } else if(delta < next) {
                                 next = delta;
@@ -216,7 +214,7 @@ namespace InvertedTomato.Zeta {
                         // Wait until there is a new publish, or there is likely  for a republish to be required
                         SendLock.WaitOne(next);
                     } catch(SocketException ex) {
-                        Trace.TraceWarning($"SERVER-SEND: Socket error occured. {ex.Message}");
+                        Trace.WriteLine($"Socket error {ex.SocketErrorCode}.", "server-receive-warning");
                     }
                 }
             } catch(ObjectDisposedException) { }
@@ -228,10 +226,8 @@ namespace InvertedTomato.Zeta {
                 TopicRecords.TryRemove(topic, out var a);
                 return;
             }
-            
-            if(value.Length + Constants.SERVERTXHEADER_LENGTH > Options.Mtu) {
-                Trace.TraceWarning($"SERVER-PUBLISH: Publish value length exceeds MTU set in options and will probably be dropped by the network. Sending anyway. ([Header]{Constants.SERVERTXHEADER_LENGTH} + [Value]{value.Length} > [MTU]{Options.Mtu})");
-            }
+
+            Trace.WriteLineIf(value.Length + Constants.SERVERTXHEADER_LENGTH > Options.Mtu, $"Publish value length exceeds MTU set in options and will probably be dropped by the network. Sending anyway. ([Header]{Constants.SERVERTXHEADER_LENGTH} + [Value]{value.Length} > [MTU]{Options.Mtu})", "server-publish-warning");
 
             lock(Sync) {
                 if(IsDisposed) {
@@ -242,7 +238,9 @@ namespace InvertedTomato.Zeta {
                 if(TopicRecords.TryGetValue(topic, out var record)) {
                     record.Revision++;
                 } else {
-                    record = TopicRecords[topic] = new TopicRecord();
+                    record = TopicRecords[topic] = new TopicRecord() {
+                        PendingSubscribers = new ConcurrentDictionary<EndPoint, EndPoint>() // Required to avoid sync issue over the following few lines
+                    };
                 }
 
                 // Compose packet
@@ -252,7 +250,7 @@ namespace InvertedTomato.Zeta {
                 Buffer.BlockCopy(value, 0, record.Packet, 10, value.Length);                        // Byte[?] value
 
                 // Reset subscriber lists
-                record.PendingSubscribers = new ConcurrentDictionary<EndPoint, EndPoint>(SubscriberRecords.ToDictionary(a=>a.Key, a=>a.Key));
+                record.PendingSubscribers = new ConcurrentDictionary<EndPoint, EndPoint>(SubscriberRecords.ToDictionary(a => a.Key, a => a.Key));
                 record.SendAfter = DateTime.MinValue;
 
                 // Release lock

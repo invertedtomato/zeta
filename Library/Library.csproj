@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard1.3</TargetFramework>
     <AssemblyName>InvertedTomato.Zeta</AssemblyName>
-    <RootNamespace>InvertedTomato.Zeta</RootNamespace>
+    <RootNamespace>InvertedTomato.Net.Zeta</RootNamespace>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
     <Description>No-nonsense, high performance pub-sub for distributing time-critical data over UDP.</Description>
     <PackageProjectUrl>https://github.com/invertedtomato/zeta</PackageProjectUrl>
@@ -11,6 +11,11 @@
     <RepositoryType>git</RepositoryType>
     <PackageLicenseUrl>https://github.com/invertedtomato/zeta/blob/master/LICENSE</PackageLicenseUrl>
     <PackageTags>pubsub udp socket performance</PackageTags>
+    <PackageId>InvertedTomato.Net.Zeta</PackageId>
+    <Authors>InvertedTomato</Authors>
+    <Company>InvertedTomato</Company>
+    <Product>Zeta</Product>
+    <Version>1.0.1</Version>
   </PropertyGroup>
 
   <ItemGroup>

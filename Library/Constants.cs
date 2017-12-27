@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace InvertedTomato.Zeta {
+namespace InvertedTomato.Net.Zeta {
     public static class Constants {
         public static readonly Byte VERSION = 0x01;
         public static readonly Int32 SERVERTXHEADER_LENGTH = 8 + 2; // <topic> <revision>

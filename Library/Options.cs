@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 
-namespace InvertedTomato.Zeta {
+namespace InvertedTomato.Net.Zeta {
     public class Options {
         /// <summary>
         /// The maximum packet size to send, and to expect to receive.

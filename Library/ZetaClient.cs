@@ -7,7 +7,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Linq;
 
-namespace InvertedTomato.Zeta {
+namespace InvertedTomato.Net.Zeta {
     public class ZetaClient : IDisposable {
         /// <summary>
         /// Server to communicate with

@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.Net;
 
-namespace InvertedTomato.Zeta {
+namespace InvertedTomato.Net.Zeta {
     public class ZetaClient<T> : ZetaClient {
         public ZetaClient(EndPoint server, Action<UInt64, UInt16, T> handler) : base(server, Handle(handler)) { }
 

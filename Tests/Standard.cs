@@ -1,4 +1,4 @@
-using InvertedTomato.Zeta;
+using InvertedTomato.Net.Zeta;
 using System;
 using System.Net;
 using System.Threading;

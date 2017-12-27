@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Net;
 
-namespace InvertedTomato.Zeta {
+namespace InvertedTomato.Net.Zeta {
     public class TopicRecord {
         public EndPoint[] PendingSubscribers { get; set; }
         public DateTime SendAfter { get; set; }

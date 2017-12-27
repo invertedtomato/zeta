@@ -9,7 +9,7 @@ using System.Collections.Generic;
 
 // TODO: search for TODOs. 
 
-namespace InvertedTomato.Zeta {
+namespace InvertedTomato.Net.Zeta {
     public class ZetaServer : IDisposable {
         /// <summary>
         /// Underlying UDP socket

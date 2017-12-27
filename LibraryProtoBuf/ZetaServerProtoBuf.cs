@@ -3,7 +3,7 @@ using System;
 using System.IO;
 using System.Net;
 
-namespace InvertedTomato.Zeta {
+namespace InvertedTomato.Net.Zeta {
     public class ZetaServer<T> : ZetaServer {
         public ZetaServer(UInt16 port) : base(port) { }
 

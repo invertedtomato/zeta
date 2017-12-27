@@ -5,9 +5,9 @@ using System.Threading;
 using Xunit;
 
 namespace Tests {
-    public class Basics {
+    public class Standard {
         [Fact]
-        public void Basic() {
+        public void FullRun() {
             UInt32 expected = 0;
 
             var server = new ZetaServer(1000);

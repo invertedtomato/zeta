@@ -283,8 +283,7 @@ namespace InvertedTomato.Zeta {
                 // Set large fields to null
             }
         }
-
-
+        
         public void Dispose() {
             Dispose(true);
         }

@@ -5,6 +5,7 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Linq;
 using System.Diagnostics;
+using System.Collections.Generic;
 
 // TODO: search for TODOs. 
 
@@ -147,8 +148,8 @@ namespace InvertedTomato.Zeta {
                                 Trace.WriteLine($"{endpoint} Acknowledged {topic}#{revision}.", "server-receive");
 
                                 if(TopicRecords.TryGetValue(topic, out var topicRecord)) {
-                                    if(topicRecord.Revision == revision) { // TODO Sync issue between this line and the one below!!!!!!
-                                        topicRecord.PendingSubscribers.TryRemove(endpoint, out var a);
+                                    if(topicRecord.Revision == revision) {
+                                        topicRecord.PendingSubscribers = topicRecord.PendingSubscribers.Except(new EndPoint[] { endpoint }).ToArray(); // Replace rather than adding so we don't have a sync issue
                                     }
                                 }
 
@@ -162,7 +163,7 @@ namespace InvertedTomato.Zeta {
 
                             // Queue sending latest value from all topics
                             foreach(var topicRecord in TopicRecords.Select(a => a.Value)) {
-                                topicRecord.PendingSubscribers[endpoint] = endpoint;
+                                topicRecord.PendingSubscribers = topicRecord.PendingSubscribers.Union(new EndPoint[] { endpoint }).ToArray(); // Replace rather than adding so we don't have a sync issue
                             }
                         }
                     } catch(SocketException ex) {
@@ -200,7 +201,7 @@ namespace InvertedTomato.Zeta {
                                 record.SendAfter = now.Add(Options.RetransmitInterval);
 
                                 // Send to each client..
-                                foreach(var endpoint in record.PendingSubscribers.Values) {
+                                foreach(var endpoint in record.PendingSubscribers) {
                                     var len = Socket.SendTo(record.Packet, endpoint);
                                     Trace.WriteLineIf(len != record.Packet.Length, $"Strange byte count {len}.", "server-send-warning");
                                 }
@@ -236,14 +237,21 @@ namespace InvertedTomato.Zeta {
                     throw new ObjectDisposedException("Object disposed.");
                 }
 
-                // Get topic, or create if needed
-                if(TopicRecords.TryGetValue(topic, out var record)) {
-                    record.Revision++;
+                var record = new TopicRecord();
+
+                // Calculate new revision
+                if(TopicRecords.TryGetValue(topic, out var lastRecord)) {
+                    record.Revision = lastRecord.Revision;
                 } else {
-                    record = TopicRecords[topic] = new TopicRecord() {
-                        PendingSubscribers = new ConcurrentDictionary<EndPoint, EndPoint>() // Required to avoid sync issue over the following few lines
-                    };
+                    record.Revision = UInt16.MaxValue;
                 }
+                record.Revision++;
+
+                // Add all subscribers as pending recipents
+                record.PendingSubscribers = SubscriberRecords.Select(a => a.Key).ToArray();
+
+                // Leave SendAfter blank
+                //record.SendAfter = DateTime.MinValue;
 
                 // Compose packet
                 record.Packet = new Byte[Constants.SERVERTXHEADER_LENGTH + value.Length];
@@ -251,11 +259,8 @@ namespace InvertedTomato.Zeta {
                 Buffer.BlockCopy(BitConverter.GetBytes(record.Revision), 0, record.Packet, 8, 2);   // UInt16 revision
                 Buffer.BlockCopy(value, 0, record.Packet, 10, value.Length);                        // Byte[?] value
 
-                // Reset subscriber lists
-                record.PendingSubscribers = new ConcurrentDictionary<EndPoint, EndPoint>(SubscriberRecords.ToDictionary(a => a.Key, a => a.Key));
-                record.SendAfter = DateTime.MinValue;
-
-                // Release lock
+                // Release topic update
+                TopicRecords[topic] = record;
                 SendLock.Set();
             }
         }

@@ -122,7 +122,7 @@ namespace InvertedTomato.Zeta {
 
                         // Send packet
                         if(pending.Count == 0) {
-                            Trace.WriteLine($"Sending keep-alive", "client-send");
+                            Trace.WriteLine($"Sending keep-alive.", "client-send");
                         } else {
                             Trace.WriteLine($"Sending acknowledgements {string.Join(",", pending.Select(a => a.Key + "#" + a.Value))}.", "client-send");
                         }
@@ -177,7 +177,7 @@ namespace InvertedTomato.Zeta {
                             // Fire handler
                             Handler(topic, revision, value);
                         } else {
-                            Trace.WriteLine($"Stale update {topic}#{revision} received. Discarded", "client-receive"); // This occurs when packets arrive out of order
+                            Trace.WriteLine($"Stale update {topic}#{revision} received (head is {headRevision}). Discarded.", "client-receive"); // This occurs when packets arrive out of order
                         }
                     } catch(SocketException ex) {
                         // If nothing has been received recently...

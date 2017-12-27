@@ -4,6 +4,13 @@
     <TargetFramework>netstandard1.3</TargetFramework>
     <AssemblyName>InvertedTomato.Zeta.ProtoBuf</AssemblyName>
     <RootNamespace>InvertedTomato.Zeta</RootNamespace>
+    <Description>Integrated sugar support for protomuf-net Zeta. Automates conversion of objects to byte arrays to save you work.</Description>
+    <PackageLicenseUrl>https://github.com/invertedtomato/zeta/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/invertedtomato/zeta</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/invertedtomato/zeta</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <PackageTags>pubsub udp socket performance</PackageTags>
   </PropertyGroup>
 
   <ItemGroup>

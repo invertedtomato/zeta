@@ -11,6 +11,10 @@ namespace InvertedTomato.Net.Zeta {
 
         public ZetaServer(EndPoint endpoint, Options options) : base(endpoint, options) { }
 
+        public void Publish(T value) {
+            Publish(0, value);
+        }
+
         public void Publish(UInt64 topic, T value) {
             using(var stream = new MemoryStream()) {
                 Serializer.Serialize(stream, value);

@@ -223,6 +223,16 @@ namespace InvertedTomato.Net.Zeta {
             } catch(ObjectDisposedException) { }
         }
 
+        /// <summary>
+        /// Publish a message to clients on the default topic (0).
+        /// </summary>
+        public void Publish(Byte[] value) {
+            Publish(0, value);
+        }
+
+        /// <summary>
+        /// Publish a message to clients.
+        /// </summary>
         public void Publish(UInt64 topic, Byte[] value) {
             // Handle un-publishes
             if(null == value) {
@@ -283,7 +293,7 @@ namespace InvertedTomato.Net.Zeta {
                 // Set large fields to null
             }
         }
-        
+
         public void Dispose() {
             Dispose(true);
         }

@@ -11,9 +11,9 @@ namespace Tests {
         public void FullRun() {
             UInt32 expected = 0;
 
-            var server = new ZetaServer<A>(1001);
+            var server = new ZetaServer<Message>(1001);
 
-            var client = new ZetaClient<A>(new IPEndPoint(IPAddress.Loopback, 1001), (topic, revision, value) => {
+            var client = new ZetaClient<Message>(new IPEndPoint(IPAddress.Loopback, 1001), (topic, revision, value) => {
                 Assert.Equal((UInt64)1, topic);
                 Assert.Equal(expected, revision);
                 Assert.Equal(expected, value.Value);
@@ -23,9 +23,9 @@ namespace Tests {
 
             Thread.Sleep(1000);
 
-            server.Publish(1, new A(0));
-            server.Publish(1, new A(1));
-            server.Publish(1, new A(2));
+            server.Publish(new Message(0));
+            server.Publish(new Message(1));
+            server.Publish(new Message(2));
 
             Thread.Sleep(1000);
 
@@ -34,9 +34,9 @@ namespace Tests {
     }
 
     [ProtoContract]
-    public class A {
-        public A() { }
-        public A(UInt32 value) { Value = value; }
+    public class Message {
+        public Message() { }
+        public Message(UInt32 value) { Value = value; }
 
         [ProtoMember(1)]
         public UInt32 Value { get; set; }

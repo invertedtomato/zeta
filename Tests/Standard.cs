@@ -13,7 +13,7 @@ namespace Tests {
             var server = new ZetaServer(1000);
 
             var client = new ZetaClient(new IPEndPoint(IPAddress.Loopback, 1000), (topic, revision, value) => {
-                Assert.Equal((UInt64)1, topic);
+                Assert.Equal((UInt64)0, topic);
                 Assert.Equal(expected, revision);
                 Assert.Equal(expected, value[0]);
                 expected++;
@@ -22,9 +22,9 @@ namespace Tests {
 
             Thread.Sleep(1000);
 
-            server.Publish(1, new Byte[] { 0 });
-            server.Publish(1, new Byte[] { 1 });
-            server.Publish(1, new Byte[] { 2 });
+            server.Publish(new Byte[] { 0 });
+            server.Publish(new Byte[] { 1 });
+            server.Publish(new Byte[] { 2 });
 
             Thread.Sleep(1000);
 

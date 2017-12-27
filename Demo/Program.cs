@@ -12,7 +12,7 @@ namespace Demo {
 
             var server = new ZetaServer(1000);
 
-            var client = new ZetaClient(new IPEndPoint(IPAddress.Loopback, 1000), (topic, revision, value) => {
+            var client = new ZetaClient(new IPEndPoint(new IPAddress(new byte[]{ 127, 0, 0, 1 }), 1000), (topic, revision, value) => {
                 if(value.Length != 1) {
                     throw new ArgumentOutOfRangeException(nameof(value));
                 }

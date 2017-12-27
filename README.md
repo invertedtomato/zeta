@@ -25,9 +25,8 @@ server.Publish(new Message(2));
 
 Create clients and subscribe to the data stream:
 ```c$
-var serverEndPoint = new IPEndPoint(new IPAddress(new byte[]{ 127, 0, 0, 1 }), 1000);
-var client = new ZetaClient<Message>(serverEndPoint, (topic, revision, value) => {
-    Console.WriteLine($"{topic}#{revision}={value.Value}"); // Called every time an update arrives
+var client = new ZetaClient<Message>("127.0.0.1:1000", (topic, revision, value) => { // Connect to localhost:1000
+    Console.WriteLine($"Received value of '{value.Value}'."); // Called every time an update arrives
 });
 ```
 
@@ -44,8 +43,7 @@ server.Publish(1, new byte[] { 2 });
 
 Create clients and subscribe to the data stream:
 ```c$
-var serverEndPoint = new IPEndPoint(new IPAddress(new byte[]{ 127, 0, 0, 1 }), 1000);
-var client = new ZetaClient(serverEndPoint, (topic, revision, value) => {
+var client = new ZetaClient("127.0.0.1:1000", (topic, revision, value) => {
     Console.WriteLine($"{topic}#{revision}={value[0]}"); // Value is a byte array
 });
 ```

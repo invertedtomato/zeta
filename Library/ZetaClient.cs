@@ -6,6 +6,7 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Linq;
+using System.Globalization;
 
 namespace InvertedTomato.Net.Zeta {
     public class ZetaClient : IDisposable {
@@ -33,7 +34,7 @@ namespace InvertedTomato.Net.Zeta {
         /// Thread handling data transmission.
         /// </summary>
         private readonly Thread SendThread;
-        
+
         /// <summary>
         /// Lock preventing send thread busy-spinning.
         /// </summary>
@@ -43,7 +44,7 @@ namespace InvertedTomato.Net.Zeta {
         /// Acknowledgements which are pending being sent back to the server
         /// </summary>
         private readonly ConcurrentQueue<KeyValuePair<UInt64, UInt16>> AcknowledgementsPending = new ConcurrentQueue<KeyValuePair<ulong, ushort>>();
-        
+
         /// <summary>
         /// User-provided options
         /// </summary>
@@ -53,6 +54,8 @@ namespace InvertedTomato.Net.Zeta {
         /// If the client is disposed and no longer operable.
         /// </summary>
         public Boolean IsDisposed { get; private set; }
+
+        public ZetaClient(String server, Action<UInt64, UInt16, Byte[]> handler) : this(ParseIPEndPoint(server), new Options(), handler) { }
 
         public ZetaClient(EndPoint server, Action<UInt64, UInt16, Byte[]> handler) : this(server, new Options(), handler) { }
 
@@ -212,6 +215,35 @@ namespace InvertedTomato.Net.Zeta {
 
         public void Dispose() {
             Dispose(true);
+        }
+
+        private static IPEndPoint ParseIPEndPoint(string value) {
+            if(null == value) {
+                throw new ArgumentNullException(nameof(value));
+            }
+
+            var ep = value.Split(':');
+            if(ep.Length < 2) {
+                throw new FormatException("Invalid endpoint format");
+            }
+
+            IPAddress ip;
+            if(ep.Length > 2) {
+                if(!IPAddress.TryParse(string.Join(":", ep, 0, ep.Length - 1), out ip)) {
+                    throw new FormatException("Invalid ip-adress");
+                }
+            } else {
+                if(!IPAddress.TryParse(ep[0], out ip)) {
+                    throw new FormatException("Invalid ip-adress");
+                }
+            }
+
+            int port;
+            if(!int.TryParse(ep[ep.Length - 1], NumberStyles.None, NumberFormatInfo.CurrentInfo, out port)) {
+                throw new FormatException("Invalid port");
+            }
+
+            return new IPEndPoint(ip, port);
         }
     }
 }

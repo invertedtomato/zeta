@@ -12,7 +12,7 @@ namespace Tests {
 
             var server = new ZetaServer(1000);
 
-            var client = new ZetaClient(new IPEndPoint(IPAddress.Loopback, 1000), (topic, revision, value) => {
+            var client = new ZetaClient("127.0.0.1:1000", (topic, revision, value) => {
                 Assert.Equal((UInt64)0, topic);
                 Assert.Equal(expected, revision);
                 Assert.Equal(expected, value[0]);

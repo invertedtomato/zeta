@@ -53,7 +53,7 @@ namespace InvertedTomato.Zeta {
         /// If the client is disposed and no longer operable.
         /// </summary>
         public Boolean IsDisposed { get; private set; }
-
+        
         public ZetaClient(EndPoint server, Action<UInt64, UInt16, Byte[]> handler) : this(server, new Options(), handler) { }
 
         public ZetaClient(EndPoint server, Options options, Action<UInt64, UInt16, Byte[]> handler) {

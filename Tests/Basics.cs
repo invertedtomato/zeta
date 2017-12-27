@@ -10,13 +10,9 @@ namespace Tests {
         public void Basic() {
             UInt32 expected = 0;
 
-            var server = new ZetaServer(1000, (endpoint, authorization) => {
-                Assert.Single(authorization);
-                Assert.Equal(128, authorization[0] );
-                return true;
-            });
+            var server = new ZetaServer(1000);
 
-            var client = new ZetaClient(new IPEndPoint(IPAddress.Loopback, 1000), new Byte[] { 128 }, (topic, revision, value) => {
+            var client = new ZetaClient(new IPEndPoint(IPAddress.Loopback, 1000), (topic, revision, value) => {
                 Assert.Equal((UInt64)1, topic);
                 Assert.Equal(expected, revision);
                 Assert.Equal(expected, value[0]);

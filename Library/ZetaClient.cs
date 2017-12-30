@@ -147,11 +147,11 @@ namespace InvertedTomato.Net.Zeta {
             var lastAck = DateTime.MinValue;
             var topicRevisions = new Dictionary<UInt64, UInt16>();
             try {
+                var buffer = new Byte[Options.Mtu];
                 while(!IsDisposed) {
                     try {
                         // Receive packet
                         var endpoint = (EndPoint)Server;
-                        var buffer = new Byte[Options.Mtu];
                         var len = Socket.ReceiveFrom(buffer, ref endpoint);
                         Trace.WriteLineIf(len < 1, $"Strange byte count {len}.", "client-receive-warning");
 

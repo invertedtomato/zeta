@@ -38,7 +38,7 @@ namespace InvertedTomato.Net.Zeta {
         /// <remarks>
         /// This is called very often, so use caching if required.
         /// </remarks>
-        public Func<EndPoint, Byte[], Boolean> AuthorizationFilter { get; set; } = (endpoint, token) => { return true; };
+        public Func<EndPoint, Byte[], Boolean> AuthorizationFilter { get; set; } = (endpoint, token) => true;
 
         /// <summary>
         /// The client must send a packet to the server at least every interval.
@@ -70,6 +70,6 @@ namespace InvertedTomato.Net.Zeta {
         /// <remarks>
         /// Only change this is you have a specific reason and you know what you're doing.
         /// </remarks>
-        public Int16 Ttl { get; set; }=32;
+        public Int16 Ttl { get; set; } = 32;
     }
 }

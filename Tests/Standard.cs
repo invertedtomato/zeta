@@ -1,3 +1,4 @@
+using InvertedTomato.IO.Messages;
 using InvertedTomato.Net.Zeta;
 using System;
 using System.Net;
@@ -10,21 +11,21 @@ namespace Tests {
         public void FullRun() {
             UInt32 expected = 0;
 
-            var server = new ZetaServer(1000);
+            var server = new ZetaServer<BinaryMessage>(1000);
 
-            var client = new ZetaClient("127.0.0.1:1000", (topic, revision, value) => {
+            var client = new ZetaClient<BinaryMessage>("127.0.0.1:1000", (topic, revision, payload) => {
                 Assert.Equal((UInt64)0, topic);
                 Assert.Equal(expected, revision);
-                Assert.Equal(expected, value[0]);
+                Assert.Equal(expected, payload.Value[0]);
                 expected++;
 
             });
 
             Thread.Sleep(1000);
 
-            server.Publish(new Byte[] { 0 });
-            server.Publish(new Byte[] { 1 });
-            server.Publish(new Byte[] { 2 });
+            server.Publish(new BinaryMessage(new Byte[] { 0 }));
+            server.Publish(new BinaryMessage(new Byte[] { 1 }));
+            server.Publish(new BinaryMessage(new Byte[] { 2 }));
 
             Thread.Sleep(1000);
 

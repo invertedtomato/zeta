@@ -6,11 +6,12 @@ using System.Threading;
 using System.Linq;
 using System.Diagnostics;
 using System.Collections.Generic;
+using InvertedTomato.IO.Messages;
 
 // TODO: search for TODOs. 
 
 namespace InvertedTomato.Net.Zeta {
-    public class ZetaServer : IDisposable {
+    public class ZetaServer<TMessage> : IDisposable where TMessage : IMessage {
         /// <summary>
         /// Underlying UDP socket
         /// </summary>
@@ -226,21 +227,24 @@ namespace InvertedTomato.Net.Zeta {
         /// <summary>
         /// Publish a message to clients on the default topic (0).
         /// </summary>
-        public void Publish(Byte[] value) {
-            Publish(0, value);
+        public void Publish(TMessage message) {
+            Publish(0, message);
         }
 
         /// <summary>
         /// Publish a message to clients.
         /// </summary>
-        public void Publish(UInt64 topic, Byte[] value) {
+        public void Publish(UInt64 topic, TMessage message) {
             // Handle un-publishes
-            if(null == value) {
+            if(null == message) {
                 TopicRecords.TryRemove(topic, out var a);
                 return;
             }
 
-            Trace.WriteLineIf(value.Length + Constants.SERVERTXHEADER_LENGTH > Options.Mtu, $"Publish value length exceeds MTU set in options and will probably be dropped by the network. Sending anyway. ([Header]{Constants.SERVERTXHEADER_LENGTH} + [Value]{value.Length} > [MTU]{Options.Mtu})", "server-publish-warning");
+            // Extract payload
+            var payload = message.Export();
+
+            Trace.WriteLineIf(payload.Length + Constants.SERVERTXHEADER_LENGTH > Options.Mtu, $"Publish value length exceeds MTU set in options and will probably be dropped by the network. Sending anyway. ([Header]{Constants.SERVERTXHEADER_LENGTH} + [Value]{payload.Length} > [MTU]{Options.Mtu})", "server-publish-warning");
 
             lock(Sync) {
                 if(IsDisposed) {
@@ -264,17 +268,17 @@ namespace InvertedTomato.Net.Zeta {
                 //record.SendAfter = DateTime.MinValue;
 
                 // Compose packet
-                record.Packet = new Byte[Constants.SERVERTXHEADER_LENGTH + value.Length];
+                record.Packet = new Byte[Constants.SERVERTXHEADER_LENGTH + payload.Length];
                 Buffer.BlockCopy(BitConverter.GetBytes(topic), 0, record.Packet, 0, 8);             // UInt64 topic
                 Buffer.BlockCopy(BitConverter.GetBytes(record.Revision), 0, record.Packet, 8, 2);   // UInt16 revision
-                Buffer.BlockCopy(value, 0, record.Packet, 10, value.Length);                        // Byte[?] value
+                Buffer.BlockCopy(payload, 0, record.Packet, 10, payload.Length);                        // Byte[?] value
 
                 // Release topic update
                 TopicRecords[topic] = record;
                 SendLock.Set();
             }
         }
-
+        
         protected virtual void Dispose(Boolean disposing) {
             lock(Sync) {
                 if(IsDisposed) {

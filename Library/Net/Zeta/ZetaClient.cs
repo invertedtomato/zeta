@@ -7,9 +7,10 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Linq;
 using System.Globalization;
+using InvertedTomato.IO.Messages;
 
 namespace InvertedTomato.Net.Zeta {
-    public class ZetaClient : IDisposable {
+    public class ZetaClient<TMessage> : IDisposable where TMessage : IMessage, new() {
         /// <summary>
         /// Server to communicate with
         /// </summary>
@@ -18,7 +19,7 @@ namespace InvertedTomato.Net.Zeta {
         /// <summary>
         /// Handler to pass received values to.
         /// </summary>
-        private readonly Action<UInt64, UInt16, Byte[]> Handler;
+        private readonly Action<UInt64, UInt16, TMessage> Handler;
 
         /// <summary>
         /// Underlying UDP socket.
@@ -55,11 +56,11 @@ namespace InvertedTomato.Net.Zeta {
         /// </summary>
         public Boolean IsDisposed { get; private set; }
 
-        public ZetaClient(String server, Action<UInt64, UInt16, Byte[]> handler) : this(ParseIPEndPoint(server), new Options(), handler) { }
+        public ZetaClient(String server, Action<UInt64, UInt16, TMessage> handler) : this(ParseIPEndPoint(server), new Options(), handler) { }
 
-        public ZetaClient(EndPoint server, Action<UInt64, UInt16, Byte[]> handler) : this(server, new Options(), handler) { }
+        public ZetaClient(EndPoint server, Action<UInt64, UInt16, TMessage> handler) : this(server, new Options(), handler) { }
 
-        public ZetaClient(EndPoint server, Options options, Action<UInt64, UInt16, Byte[]> handler) {
+        public ZetaClient(EndPoint server, Options options, Action<UInt64, UInt16, TMessage> handler) {
             if(null == server) {
                 throw new ArgumentNullException(nameof(server));
             }
@@ -170,15 +171,19 @@ namespace InvertedTomato.Net.Zeta {
                             topicRevisions[topic] = revision;
 
                             // Decode value
-                            var value = new Byte[len - Constants.SERVERTXHEADER_LENGTH];
-                            Buffer.BlockCopy(buffer, 10, value, 0, value.Length);
+                            var payload = new Byte[len - Constants.SERVERTXHEADER_LENGTH];
+                            Buffer.BlockCopy(buffer, 10, payload, 0, payload.Length);
 
                             // Queue acknowledgement
                             AcknowledgementsPending.Enqueue(new KeyValuePair<ulong, ushort>(topic, revision));
                             SendLock.Set();
 
+                            // Load payload into message
+                            var message = default(TMessage);
+                            message.Import(payload);
+
                             // Fire handler
-                            Handler(topic, revision, value);
+                            Handler(topic, revision, message);
                         } else {
                             Trace.WriteLine($"Stale update {topic}#{revision} received (head is {headRevision}). Discarded.", "client-receive"); // This occurs when packets arrive out of order
                         }

@@ -2,51 +2,23 @@
 No-nonsense, high performance pub-sub for distributing time-critical data over UDP.
 
 ## TLDR - How to I make it go?
-Define a message you'd like to send to clients:
-```c#
-[ProtoContract] // Refer to https://github.com/mgravell/protobuf-net for attribute details
-public class Message {
-    public Message() { }
-    public Message(int value) { Value = value; }
-
-    [ProtoMember(1)]
-    public int Value { get; set; }
-}
-```
-
 Create a server and publish a stream of realtime data:
 ```c#
-var server = new ZetaServer<Message>(1000);  // 1000 is the port to listen on
-server.Publish(new Message(0));
-server.Publish(new Message(1));
-server.Publish(new Message(2));
+var server = new ZetaServer<StringMessage>(1000); // Listed on UDP port 1000, and be prepared to send StringMessages (could be BinaryMessage or something custom)
+server.Publish(new StringMessage("Message 1"));
+server.Publish(new StringMessage("Message 2"));
+server.Publish(new StringMessage("Message 3"));
+server.Publish(new StringMessage("Message 4"));
 // etc...
 ```
 
 Create clients and subscribe to the data stream:
 ```c$
-var client = new ZetaClient<Message>("127.0.0.1:1000", (topic, revision, value) => { // Connect to localhost:1000
-    Console.WriteLine($"Received value of '{value.Value}'."); // Called every time an update arrives
+var client = new ZetaClient<StringMessage>("127.0.0.1:1000", (topic, revision, payload) => { // Connect to localhost:1000
+    Console.WriteLine($"Received value of '{payload.Value}'."); // Called every time an update arrives
 });
 ```
 
-## Overview
-The above example uses ProtoBuf under the hood to seralize your objects into a byte array. It's not nesscessarily the most efficent. In reality you get more control to use it like this:
-Create a server and publish a stream of realtime data:
-```c#
-var server = new ZetaServer(1000);
-server.Publish(1, new byte[] { 0 }); // '1' is the topic to send on
-server.Publish(1, new byte[] { 1 });
-server.Publish(1, new byte[] { 2 });
-// etc...
-```
-
-Create clients and subscribe to the data stream:
-```c$
-var client = new ZetaClient("127.0.0.1:1000", (topic, revision, value) => {
-    Console.WriteLine($"{topic}#{revision}={value[0]}"); // Value is a byte array
-});
-```
 
 ## Notes
 ### Maximum transmission unit

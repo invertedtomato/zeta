@@ -1,4 +1,5 @@
-﻿using InvertedTomato.Net.Zeta;
+﻿using InvertedTomato.IO.Messages;
+using InvertedTomato.Net.Zeta;
 using System;
 using System.Diagnostics;
 using System.Net;
@@ -10,27 +11,23 @@ namespace Demo {
             var rnd = new Random();
             Trace.Listeners.Add(new Listener());
 
-            var server = new ZetaServer(1000);
+            var server = new ZetaServer<StringMessage>(1000); // Listed on UDP port 1000
 
-            var client = new ZetaClient(new IPEndPoint(new IPAddress(new byte[]{ 127, 0, 0, 1 }), 1000), (topic, revision, value) => {
-                if(value.Length != 1) {
-                    throw new ArgumentOutOfRangeException(nameof(value));
-                }
-
+            var client = new ZetaClient<StringMessage>("127.0.0.1:1000", (topic, revision, payload) => {
                 Console.ForegroundColor = ConsoleColor.Gray;
-                Console.WriteLine($"> {topic}#{revision}={value[0]}");
+                Console.WriteLine($"> {topic}#{revision}={payload.Value}");
             });
 
 
             Console.ForegroundColor = ConsoleColor.White;
             Console.WriteLine("Sending payloads...");
-            server.Publish(0, new Byte[] { 128 });
-            server.Publish(1, new Byte[] { 0 });
-            server.Publish(1, new Byte[] { 1 });
-            server.Publish(2, new Byte[] { 255 });
+            server.Publish(0, new StringMessage("Topic 0, message 1"));
+            server.Publish(1, new StringMessage("Topic 1, message 1"));
+            server.Publish(1, new StringMessage("Topic 1, message 2"));
+            server.Publish(2, new StringMessage("Topic 2, message 1"));
 
             for(byte i = 2; i <= 50; i++) {
-                server.Publish(1, new byte[] { i });
+                server.Publish(1, new StringMessage($"Topic 1, message {i}"));
                 Thread.Sleep(rnd.Next(0, 1000));
             }
 

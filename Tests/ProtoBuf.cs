@@ -11,12 +11,12 @@ namespace Tests {
         public void FullRun() {
             UInt32 expected = 0;
 
-            var server = new ZetaServer<Message>(1001);
+            var server = new ZetaServerProtoBuf<Message>(1001);
 
-            var client = new ZetaClient<Message>("127.0.0.1:1001", (topic, revision, value) => {
+            var client = new ZetaClientProtoBuf<Message>("127.0.0.1:1001", (topic, revision, payload) => {
                 Assert.Equal((UInt64)0, topic);
                 Assert.Equal(expected, revision);
-                Assert.Equal(expected, value.Value);
+                Assert.Equal(expected, payload.Value);
                 expected++;
 
             });

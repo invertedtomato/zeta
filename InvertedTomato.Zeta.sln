@@ -5,11 +5,9 @@ VisualStudioVersion = 15.0.27130.2003
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Library", "Library\Library.csproj", "{349124F8-A46F-41EB-BD49-3BDD367B45A8}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "Tests\Tests.csproj", "{7C9CCC37-CC93-4079-9B8A-0FAE7AF8AC88}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Tests", "Tests\Tests.csproj", "{7C9CCC37-CC93-4079-9B8A-0FAE7AF8AC88}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Demo", "Demo\Demo.csproj", "{6F2E4B42-6E99-4148-93FB-5DF539164C6A}"
-EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "LibraryProtoBuf", "LibraryProtoBuf\LibraryProtoBuf.csproj", "{CD65BD5F-07EE-40E8-A2A9-C36EE0257435}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Demo", "Demo\Demo.csproj", "{6F2E4B42-6E99-4148-93FB-5DF539164C6A}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{695A146A-7932-4037-BE99-CF9A71EF83B5}"
 	ProjectSection(SolutionItems) = preProject
@@ -34,10 +32,6 @@ Global
 		{6F2E4B42-6E99-4148-93FB-5DF539164C6A}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6F2E4B42-6E99-4148-93FB-5DF539164C6A}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6F2E4B42-6E99-4148-93FB-5DF539164C6A}.Release|Any CPU.Build.0 = Release|Any CPU
-		{CD65BD5F-07EE-40E8-A2A9-C36EE0257435}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{CD65BD5F-07EE-40E8-A2A9-C36EE0257435}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{CD65BD5F-07EE-40E8-A2A9-C36EE0257435}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{CD65BD5F-07EE-40E8-A2A9-C36EE0257435}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

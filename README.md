@@ -28,7 +28,7 @@ server.Publish(2, new StringMessage("Topic 2, message 1"));
 ```
 This means that if receivers incur any form of delay receiving updates, they will always receive the latest update for each topic.
 
-## What happens if a client connects after a value is published
+## What happens if a client connects after a value is published?
 The server will automatically retransmit the latest value for each topic.
 
 You can stop this from occuring by publishing a NULL on a topic:
@@ -49,5 +49,5 @@ It depends on your network. Most networks support UDP packets of 1,500 bytes or 
 
 If a message exceeds the maximum of the network (and you've incorrectly increased the maximum in `Options.Mtu`) the messages will never arrive at clients.
 
-## Is it threadsafe?
-Zeta is threadsafe. You can call Publish from as many threads as you want, simaltaniously. 
+## Is it thread safe?
+Zeta is thread safe. You can call `Publish` from as many threads as you want, simaltaniously. 

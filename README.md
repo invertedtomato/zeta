@@ -1,7 +1,7 @@
 # Zeta
 No-nonsense, high performance pub-sub for distributing time-critical data over UDP.
 
-## How to I make it go?
+# How to I make it go?
 Create a server and publish a stream of realtime data:
 ```c#
 var server = new ZetaServer<StringMessage>(1000); // Listed on UDP port 1000, and be prepared to send StringMessages (could be BinaryMessage or something custom)

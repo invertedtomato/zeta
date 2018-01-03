@@ -1,0 +1,26 @@
+class Server{
+	public Server(EndPoint, Options);
+	public void Publish<TMessage>(string[] groups=string["default"], UInt64 topic=0, TMessage message);
+	public void Dispose();
+}
+
+
+
+
+class Client{
+	public Client(EndPoint, Options); // Groups in options
+	public void Subscribe<TMessage>(UInt64 topicLow=0, topicHigh=0, Action<UInt64 topic, UInt16 revision, TMessage message);
+	public void Dispose();
+}
+
+
+
+
+Format: TTTTTTTTRRP+
+
+ * One subscriber slowing down others problem -- server loops on topic, not subscriber
+
+
+
+
+ https://github.com/paulbatum/WebSocket-Samples/blob/master/HttpListenerWebSocketEcho/Server/Server.cs

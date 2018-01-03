@@ -44,7 +44,7 @@ namespace InvertedTomato.Net.Zeta {
         /// <summary>
         /// Acknowledgements which are pending being sent back to the server
         /// </summary>
-        private readonly ConcurrentQueue<KeyValuePair<UInt64, UInt16>> AcknowledgementsPending = new ConcurrentQueue<KeyValuePair<ulong, ushort>>();
+        private readonly ConcurrentQueue<KeyValuePair<UInt64, UInt16>> AcknowledgementsPending = new ConcurrentQueue<KeyValuePair<UInt64, UInt16>>();
 
         /// <summary>
         /// User-provided options
@@ -175,7 +175,7 @@ namespace InvertedTomato.Net.Zeta {
                             Buffer.BlockCopy(buffer, 10, payload, 0, payload.Length);
 
                             // Queue acknowledgement
-                            AcknowledgementsPending.Enqueue(new KeyValuePair<ulong, ushort>(topic, revision));
+                            AcknowledgementsPending.Enqueue(new KeyValuePair<UInt64, UInt16>(topic, revision));
                             SendLock.Set();
 
                             // Load payload into message
@@ -222,7 +222,7 @@ namespace InvertedTomato.Net.Zeta {
             Dispose(true);
         }
 
-        private static IPEndPoint ParseIPEndPoint(string value) {
+        private static IPEndPoint ParseIPEndPoint(String value) {
             if(null == value) {
                 throw new ArgumentNullException(nameof(value));
             }
@@ -243,7 +243,7 @@ namespace InvertedTomato.Net.Zeta {
                 }
             }
 
-            int port;
+            Int32 port;
             if(!int.TryParse(ep[ep.Length - 1], NumberStyles.None, NumberFormatInfo.CurrentInfo, out port)) {
                 throw new FormatException("Invalid port");
             }

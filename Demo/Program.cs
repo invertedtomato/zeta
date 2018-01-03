@@ -7,7 +7,7 @@ using System.Threading;
 
 namespace Demo {
     class Program {
-        static void Main(string[] args) {
+        static void Main(String[] args) {
             var rnd = new Random();
             Trace.Listeners.Add(new Listener());
 
@@ -26,7 +26,7 @@ namespace Demo {
             server.Publish(1, new StringMessage("Topic 1, message 2"));
             server.Publish(2, new StringMessage("Topic 2, message 1"));
 
-            for(byte i = 2; i <= 50; i++) {
+            for(Byte i = 2; i <= 50; i++) {
                 server.Publish(1, new StringMessage($"Topic 1, message {i}"));
                 Thread.Sleep(rnd.Next(0, 1000));
             }

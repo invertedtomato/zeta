@@ -13,40 +13,24 @@ using InvertedTomato.IO.Messages;
 namespace InvertedTomato.Net.Zeta {
     public class ZetaServer<TMessage> : IDisposable where TMessage : IMessage {
         /// <summary>
-        /// Underlying UDP socket
-        /// </summary>
-        private readonly Socket Socket;
-
-        /// <summary>
-        /// Thread sending packets.
-        /// </summary>
-        private readonly Thread SendThread;
-
-        /// <summary>
-        /// Thread processing acknowledgements.
-        /// </summary>
-        private readonly Thread ReceiveThread;
-
-        /// <summary>
-        /// Topics
-        /// </summary>
-        private readonly ConcurrentDictionary<UInt64, TopicRecord> TopicRecords = new ConcurrentDictionary<UInt64, TopicRecord>();
-        private readonly ConcurrentDictionary<EndPoint, SubscriberRecord> SubscriberRecords = new ConcurrentDictionary<EndPoint, SubscriberRecord>();
-        private readonly AutoResetEvent SendLock = new AutoResetEvent(true);
-        private readonly Object Sync = new Object();
-
-        private readonly Options Options;
-
-
-
-        /// <summary>
         /// Are we disposed and no longer doing anything.
         /// </summary>
         public Boolean IsDisposed { get; private set; }
 
+        /// <summary>
+        /// Maximum time taken pass published values to the operating system for transmission.
+        /// </summary>
         public TimeSpan CurrentCoalesceDelay { get; private set; }
 
-
+        private readonly Options Options;
+        private readonly Socket Socket;
+        private readonly Thread SendThread;
+        private readonly Thread ReceiveThread;
+        private readonly ConcurrentDictionary<UInt64, TopicRecord> TopicRecords = new ConcurrentDictionary<UInt64, TopicRecord>();
+        private readonly ConcurrentDictionary<EndPoint, SubscriberRecord> SubscriberRecords = new ConcurrentDictionary<EndPoint, SubscriberRecord>();
+        private readonly AutoResetEvent SendLock = new AutoResetEvent(true);
+        private readonly Object Sync = new Object();
+        
         public ZetaServer(UInt16 port) : this(new IPEndPoint(IPAddress.Any, port), new Options()) { }
         public ZetaServer(EndPoint endpoint) : this(endpoint, new Options()) { }
 
@@ -83,6 +67,58 @@ namespace InvertedTomato.Net.Zeta {
             SendThread.Start();
         }
 
+        /// <summary>
+        /// Publish a message to clients on the default topic (0).
+        /// </summary>
+        public void Publish(TMessage message) {
+            Publish(0, message);
+        }
+
+        /// <summary>
+        /// Publish a message to clients.
+        /// </summary>
+        public void Publish(UInt64 topic, TMessage message) {
+            // Handle un-publishes
+            if(null == message) {
+                TopicRecords.TryRemove(topic, out var a);
+                return;
+            }
+
+            // Extract payload
+            var payload = message.Export();
+
+            Trace.WriteLineIf(payload.Length + Constants.SERVERTXHEADER_LENGTH > Options.Mtu, $"Publish value length exceeds MTU set in options and will probably be dropped by the network. Sending anyway. ([Header]{Constants.SERVERTXHEADER_LENGTH} + [Value]{payload.Length} > [MTU]{Options.Mtu})", "server-publish-warning");
+
+            lock(Sync) {
+                if(IsDisposed) {
+                    throw new ObjectDisposedException("Object disposed.");
+                }
+
+                var record = new TopicRecord(); // Note that SendAfter initializes as 0000-00-00 00:00:00
+
+                // Calculate new revision
+                if(TopicRecords.TryGetValue(topic, out var lastRecord)) {
+                    record.Revision = lastRecord.Revision;
+                } else {
+                    record.Revision = UInt16.MaxValue;
+                }
+                record.Revision++;
+
+                // Add all subscribers as pending recipents
+                record.PendingSubscribers = SubscriberRecords.Select(a => a.Key).ToArray();
+
+                // Compose packet
+                record.Packet = new Byte[Constants.SERVERTXHEADER_LENGTH + payload.Length];
+                Buffer.BlockCopy(BitConverter.GetBytes(topic), 0, record.Packet, 0, 8);             // UInt64 topic
+                Buffer.BlockCopy(BitConverter.GetBytes(record.Revision), 0, record.Packet, 8, 2);   // UInt16 revision
+                Buffer.BlockCopy(payload, 0, record.Packet, 10, payload.Length);                    // Byte[?] value
+
+                // Release topic update
+                TopicRecords[topic] = record;
+                SendLock.Set();
+            }
+        }
+        
         private void ReceieveThread_OnSpin(Object obj) {
             var buffer = new Byte[Options.Mtu];
 
@@ -224,61 +260,6 @@ namespace InvertedTomato.Net.Zeta {
             } catch(ObjectDisposedException) { }
         }
 
-        /// <summary>
-        /// Publish a message to clients on the default topic (0).
-        /// </summary>
-        public void Publish(TMessage message) {
-            Publish(0, message);
-        }
-
-        /// <summary>
-        /// Publish a message to clients.
-        /// </summary>
-        public void Publish(UInt64 topic, TMessage message) {
-            // Handle un-publishes
-            if(null == message) {
-                TopicRecords.TryRemove(topic, out var a);
-                return;
-            }
-
-            // Extract payload
-            var payload = message.Export();
-
-            Trace.WriteLineIf(payload.Length + Constants.SERVERTXHEADER_LENGTH > Options.Mtu, $"Publish value length exceeds MTU set in options and will probably be dropped by the network. Sending anyway. ([Header]{Constants.SERVERTXHEADER_LENGTH} + [Value]{payload.Length} > [MTU]{Options.Mtu})", "server-publish-warning");
-
-            lock(Sync) {
-                if(IsDisposed) {
-                    throw new ObjectDisposedException("Object disposed.");
-                }
-
-                var record = new TopicRecord();
-
-                // Calculate new revision
-                if(TopicRecords.TryGetValue(topic, out var lastRecord)) {
-                    record.Revision = lastRecord.Revision;
-                } else {
-                    record.Revision = UInt16.MaxValue;
-                }
-                record.Revision++;
-
-                // Add all subscribers as pending recipents
-                record.PendingSubscribers = SubscriberRecords.Select(a => a.Key).ToArray();
-
-                // Leave SendAfter blank
-                //record.SendAfter = DateTime.MinValue;
-
-                // Compose packet
-                record.Packet = new Byte[Constants.SERVERTXHEADER_LENGTH + payload.Length];
-                Buffer.BlockCopy(BitConverter.GetBytes(topic), 0, record.Packet, 0, 8);             // UInt64 topic
-                Buffer.BlockCopy(BitConverter.GetBytes(record.Revision), 0, record.Packet, 8, 2);   // UInt16 revision
-                Buffer.BlockCopy(payload, 0, record.Packet, 10, payload.Length);                        // Byte[?] value
-
-                // Release topic update
-                TopicRecords[topic] = record;
-                SendLock.Set();
-            }
-        }
-        
         protected virtual void Dispose(Boolean disposing) {
             lock(Sync) {
                 if(IsDisposed) {

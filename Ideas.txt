@@ -1,6 +1,6 @@
 class Server{
 	public Server(EndPoint, Options);
-	public void Publish<TMessage>(string[] groups=string["default"], UInt64 topic=0, TMessage message);
+	public void Publish<TMessage>(TMessage message, UInt64 topic=0, param string[] groups=string["default"]);
 	public void Dispose();
 }
 

@@ -3,7 +3,12 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 15
 VisualStudioVersion = 15.0.27130.2003
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "InvertedTomato.WebPubSub", "InvertedTomato.WebPubSub\InvertedTomato.WebPubSub.csproj", "{30FDCEFE-A45A-4DA5-B3FD-DBD904B0F316}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Library", "Library\Library.csproj", "{B61AAE1F-C098-4D90-8DF0-8789F13B405B}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{5A140B5E-7EF7-49A9-ADBF-D5ED9429C540}"
+	ProjectSection(SolutionItems) = preProject
+		Ideas.txt = Ideas.txt
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,10 +16,10 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{30FDCEFE-A45A-4DA5-B3FD-DBD904B0F316}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{30FDCEFE-A45A-4DA5-B3FD-DBD904B0F316}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{30FDCEFE-A45A-4DA5-B3FD-DBD904B0F316}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{30FDCEFE-A45A-4DA5-B3FD-DBD904B0F316}.Release|Any CPU.Build.0 = Release|Any CPU
+		{B61AAE1F-C098-4D90-8DF0-8789F13B405B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{B61AAE1F-C098-4D90-8DF0-8789F13B405B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{B61AAE1F-C098-4D90-8DF0-8789F13B405B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{B61AAE1F-C098-4D90-8DF0-8789F13B405B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

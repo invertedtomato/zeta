@@ -6,4 +6,8 @@
     <RootNamespace>InvertedTomato.WebPubSub</RootNamespace>
   </PropertyGroup>
 
+  <ItemGroup>
+    <PackageReference Include="InvertedTomato.Messages" Version="1.0.1" />
+  </ItemGroup>
+
 </Project>

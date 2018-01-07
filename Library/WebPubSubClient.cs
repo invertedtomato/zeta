@@ -85,7 +85,7 @@ namespace InvertedTomato.WebPubSub {
                     var revision = BitConverter.ToUInt64(buffer, 8);
 
                     // Get handler
-                    if(!Handlers.TryGetValue(topic, out var handlerRecord)) {
+                    if(!Handlers.TryGetValue(topic, out var handlerRecord)) {  // TODO needs rethinking!!
                         Trace.TraceWarning($"RX: Unexpected topic {topic}#{revision}");
                         continue;
                     }
@@ -125,7 +125,7 @@ namespace InvertedTomato.WebPubSub {
                 }
 
                 // Set handler on topic range
-                for(var topic = topicLow; topic <= topicHigh; topic++) {
+                for(var topic = topicLow; topic <= topicHigh; topic++) { // TODO: Needs rethinking
                     Handlers[topic] = new HandlerRecord() {
                         Handler = handler,
                         MessageType = typeof(TMessage)

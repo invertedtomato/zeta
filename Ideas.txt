@@ -16,7 +16,7 @@ class Client{
 
 
 
-Format: TTTTTTTTRRP+
+Format: TTTTTTTTRRRRRRRRP+
 
  * One subscriber slowing down others problem -- server loops on topic, not subscriber
 

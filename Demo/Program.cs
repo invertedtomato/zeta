@@ -15,16 +15,17 @@ namespace InvertedTomato.WebPubSub {
             Console.Write("Starting server... ");
             var server = new WebPubSubServer("http://+:8000/");
             Console.WriteLine("done");
-            Console.ReadKey(true);
 
             Console.Write("Starting client... ");
             var client = new WebPubSubClient("ws://localhost:8000/");
+            Console.WriteLine("done");
+
+            Console.Write("Subscribing client... ");
             client.Subscribe((UInt64 topic, UInt64 revision, StringMessage message) => {
                 revisions[topic] = revision;
                 values[topic] = message.ToString();
             });
             Console.WriteLine("done");
-            Console.ReadKey(true);
 
             Console.WriteLine("Sending payloads...");
             server.Publish(new StringMessage("Topic 0, message 1"), 0);
@@ -38,7 +39,7 @@ namespace InvertedTomato.WebPubSub {
             }
 
             Console.WriteLine("done");
-            Console.ReadKey(true);
+            //Console.ReadKey(true);
 
             Console.Write("Stopping... ");
             client.Dispose();

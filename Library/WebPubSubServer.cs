@@ -194,10 +194,10 @@ namespace InvertedTomato.WebPubSub {
                 }
 
                 // Compose packet
-                var packet = new Byte[Constants.SERVERTXHEADER_LENGTH + payload.Length];
+                var packet = new Byte[Constants.SERVERTXHEADER_LENGTH + payload.Count];
                 Buffer.BlockCopy(BitConverter.GetBytes(topic), 0, packet, 0, 8);             // UInt64 topic
                 Buffer.BlockCopy(BitConverter.GetBytes(record.Revision), 0, packet, 8, 8);   // UInt64 revision
-                Buffer.BlockCopy(payload, 0, packet, 16, payload.Length);                    // Byte[?] value
+                Buffer.BlockCopy(payload.Array, payload.Offset, packet, 16, payload.Count);  // Byte[?] value
                 record.Packet = new ArraySegment<Byte>(packet);
 
                 // Release topic update

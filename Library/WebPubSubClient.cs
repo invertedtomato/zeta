@@ -1,11 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
+using System.Linq;
 
 namespace InvertedTomato.WebPubSub {
     public class WebPubSubClient : IDisposable {
+        private readonly String SubProtocol = "webpubsub";
+        private readonly TimeSpan KeepAliveInterval = new TimeSpan(0, 0, 10);
         private readonly ClientWebSocket Socket;
 
         public Boolean IsDisposed { get; private set; }
@@ -22,23 +26,48 @@ namespace InvertedTomato.WebPubSub {
             if(null == authorization) {
                 throw new ArgumentNullException(nameof(authorization));
             }
+            if(!endpoint.EndsWith("/")) {
+                throw new ArgumentException("Must end with a '/'.", nameof(endpoint));
+            }
+            if(!endpoint.StartsWith("ws://") && !endpoint.StartsWith("wss://")) {
+                throw new ArgumentException("Must start with a 'ws://' or 'wss://'.", nameof(endpoint));
+            }
 
             // Connect to server
             var target = $"{endpoint}?channels={String.Join(",", channels)}&authorization={BitConverter.ToString(authorization)}";
             Socket = new ClientWebSocket();
-            Socket.ConnectAsync(new Uri(target), CancellationToken.None).RunSynchronously();
+            Socket.Options.AddSubProtocol(SubProtocol);
+            Socket.Options.KeepAliveInterval = KeepAliveInterval;
+            Socket.ConnectAsync(new Uri(target), CancellationToken.None).Wait();
 
             StartReceive();
         }
 
         private async void StartReceive() {
+            var buffer = new Byte[512]; // TODO
             try {
-                while(!IsDisposed) {
-                    //await Socket.ReceiveAsync();
+                while(!IsDisposed && Socket.State == WebSocketState.Open) {
+                    // Read result
+                    var result = await Socket.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
 
-                    // TODO
+                    // Close connection if requested
+                    if(result.MessageType == WebSocketMessageType.Close) {
+                        await Socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None);
+                        continue;
+                    }
+
+                    // Close connection on bad message type
+                    if(result.MessageType == WebSocketMessageType.Text) {
+                        await Socket.CloseAsync(WebSocketCloseStatus.InvalidMessageType, "Cannot accept text frame", CancellationToken.None);
+                        continue;
+                    }
+
+                    // Report message
+                    Trace.TraceWarning($"RX: Unexpected message {BitConverter.ToString(buffer.Take(result.Count).ToArray())}");
                 }
             } catch(ObjectDisposedException) {
+            } catch(Exception e) {
+                Trace.TraceWarning($"RX: {e.Message}");
             } finally {
                 Socket.Dispose();
             }

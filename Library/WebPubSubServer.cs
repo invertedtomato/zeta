@@ -79,7 +79,7 @@ namespace InvertedTomato.WebPubSub {
 
                     // TODO: reject if not secure?
                     // TODO: authentication
-                    
+
                     // Upgrade to web sockets
                     WebSocketContext webSocketContext = null;
                     try {
@@ -90,12 +90,9 @@ namespace InvertedTomato.WebPubSub {
                         listenerContext.Response.Close();
                         return;
                     }
-
-                    // TODO: determine channels
-
-
+                    
                     // Create subscriber record
-                    var subscriberId = (UInt64)(Interlocked.Increment(ref NextSubscriberId) + Math.Abs(Int64.MinValue));
+                    var subscriberId = (UInt64)(Interlocked.Increment(ref NextSubscriberId) - Int64.MinValue);
                     var subscriber = SubscriberRecords[subscriberId] = new SubscriberRecord() {
                         Socket = webSocketContext.WebSocket,
                         Channels = channels.ToArray()

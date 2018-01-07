@@ -171,15 +171,14 @@ namespace InvertedTomato.Net.Zeta {
                             topicRevisions[topic] = revision;
 
                             // Decode value
-                            var payload = new Byte[len - Constants.SERVERTXHEADER_LENGTH];
-                            Buffer.BlockCopy(buffer, 10, payload, 0, payload.Length);
+                            var payload = new ArraySegment<Byte>(buffer, 10, len - Constants.SERVERTXHEADER_LENGTH);
 
                             // Queue acknowledgement
                             AcknowledgementsPending.Enqueue(new KeyValuePair<UInt64, UInt16>(topic, revision));
                             SendLock.Set();
 
                             // Load payload into message
-                            var message = default(TMessage);
+                            var message = new TMessage();
                             message.Import(payload);
 
                             // Fire handler

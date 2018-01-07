@@ -87,7 +87,7 @@ namespace InvertedTomato.Net.Zeta {
             // Extract payload
             var payload = message.Export();
 
-            Trace.WriteLineIf(payload.Length + Constants.SERVERTXHEADER_LENGTH > Options.Mtu, $"Publish value length exceeds MTU set in options and will probably be dropped by the network. Sending anyway. ([Header]{Constants.SERVERTXHEADER_LENGTH} + [Value]{payload.Length} > [MTU]{Options.Mtu})", "server-publish-warning");
+            Trace.WriteLineIf(payload.Count + Constants.SERVERTXHEADER_LENGTH > Options.Mtu, $"Publish value length exceeds MTU set in options and will probably be dropped by the network. Sending anyway. ([Header]{Constants.SERVERTXHEADER_LENGTH} + [Value]{payload.Count} > [MTU]{Options.Mtu})", "server-publish-warning");
 
             lock(Sync) {
                 if(IsDisposed) {
@@ -108,10 +108,10 @@ namespace InvertedTomato.Net.Zeta {
                 record.PendingSubscribers = SubscriberRecords.Select(a => a.Key).ToArray();
 
                 // Compose packet
-                record.Packet = new Byte[Constants.SERVERTXHEADER_LENGTH + payload.Length];
+                record.Packet = new Byte[Constants.SERVERTXHEADER_LENGTH + payload.Count];
                 Buffer.BlockCopy(BitConverter.GetBytes(topic), 0, record.Packet, 0, 8);             // UInt64 topic
                 Buffer.BlockCopy(BitConverter.GetBytes(record.Revision), 0, record.Packet, 8, 2);   // UInt16 revision
-                Buffer.BlockCopy(payload, 0, record.Packet, 10, payload.Length);                    // Byte[?] value
+                Buffer.BlockCopy(payload.Array,payload.Offset, record.Packet, 10, payload.Count);   // Byte[?] value
 
                 // Release topic update
                 TopicRecords[topic] = record;

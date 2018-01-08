@@ -149,7 +149,9 @@ namespace InvertedTomato.WebPubSub {
                 while(!IsDisposed && subscriber.Socket.State == WebSocketState.Open) {
                     foreach(var topicRecord in TopicRecords) {
                         // If the client is in need of an update
-                        if(!lastRevisions.TryGetValue(topicRecord.Key, out var lastRevision) || lastRevision < topicRecord.Value.Revision) {
+                        if(subscriber.Channels.Contains(topicRecord.Value.Channel) && // Correct channel
+                            (!lastRevisions.TryGetValue(topicRecord.Key, out var lastRevision) || lastRevision < topicRecord.Value.Revision)) // There's a new revision
+                            {
                             // Send update
                             await subscriber.Socket.SendAsync(topicRecord.Value.Packet, WebSocketMessageType.Binary, true, CancellationToken.None);
 
@@ -212,7 +214,7 @@ namespace InvertedTomato.WebPubSub {
 
         protected virtual void Dispose(Boolean disposing) {
             lock(Sync) {
-                if(!IsDisposed) {
+                if(IsDisposed) {
                     return;
                 }
                 IsDisposed = true;

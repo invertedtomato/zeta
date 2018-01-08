@@ -5,8 +5,8 @@ using System.Threading;
 
 namespace InvertedTomato.WebPubSub {
     class Program {
-        // netsh http add urlacl url=http://127.0.0.1:8000/ user=lappy
         static void Main(String[] args) {
+            //netsh http add urlacl url=http://*:8000/ user=Everyone
             var revisions = new Dictionary<UInt64, UInt64>();
             var values = new Dictionary<UInt64, String>();
 
@@ -24,6 +24,7 @@ namespace InvertedTomato.WebPubSub {
             client.Subscribe((UInt64 topic, UInt64 revision, StringMessage message) => {
                 revisions[topic] = revision;
                 values[topic] = message.ToString();
+                Console.WriteLine($"  {topic}#{revision}: {message}");
             });
             Console.WriteLine("done");
 
@@ -35,9 +36,10 @@ namespace InvertedTomato.WebPubSub {
 
             for(var i = 2; i <= 50; i++) {
                 server.Publish(new StringMessage($"Topic 1, message {i}"), 1);
-                Thread.Sleep(rnd.Next(0, 1000));
+                //Thread.Sleep(rnd.Next(0, 1000));
             }
 
+            Thread.Sleep(1000);
             Console.WriteLine("done");
             //Console.ReadKey(true);
 
@@ -45,6 +47,7 @@ namespace InvertedTomato.WebPubSub {
             client.Dispose();
             server.Dispose();
             Console.WriteLine("done");
+            Console.ReadKey(true);
         }
     }
 }

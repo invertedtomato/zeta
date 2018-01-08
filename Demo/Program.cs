@@ -41,13 +41,12 @@ namespace InvertedTomato.WebPubSub {
 
             Thread.Sleep(1000);
             Console.WriteLine("done");
-            //Console.ReadKey(true);
-
+            Console.ReadKey(true);
+            
             Console.Write("Stopping... ");
             client.Dispose();
             server.Dispose();
             Console.WriteLine("done");
-            Console.ReadKey(true);
         }
     }
 }

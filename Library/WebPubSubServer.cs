@@ -9,6 +9,8 @@ using System.Net.WebSockets;
 using System.Collections.Concurrent;
 using InvertedTomato.IO.Messages;
 using System.Diagnostics;
+using System.Reflection;
+using System.IO;
 
 namespace InvertedTomato.WebPubSub {
     public class WebPubSubServer : IDisposable {
@@ -16,10 +18,12 @@ namespace InvertedTomato.WebPubSub {
         private readonly TimeSpan KeepAliveInterval = new TimeSpan(0, 0, 10);
 
         private readonly HttpListener Listener;
-        private readonly Thread ReceiveThread;
+        private readonly Thread AcceptThread;
         private readonly ConcurrentDictionary<UInt64, TopicRecord> TopicRecords = new ConcurrentDictionary<UInt64, TopicRecord>();
         private readonly ConcurrentDictionary<UInt64, SubscriberRecord> SubscriberRecords = new ConcurrentDictionary<UInt64, SubscriberRecord>();
         private readonly Object Sync = new Object();
+        private readonly Byte[] ClientTypeScript;
+        private readonly Byte[] ClientJavaScript;
 
         private Int64 NextSubscriberId = Int64.MinValue;
 
@@ -31,24 +35,61 @@ namespace InvertedTomato.WebPubSub {
                 throw new ArgumentNullException(nameof(listenerPrefix));
             }
 
+            // Load web client libraries
+            var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
+            ClientTypeScript = File.ReadAllBytes($"{path}/WebPubSubClient.ts");
+            ClientJavaScript = File.ReadAllBytes($"{path}/WebPubSubClient.js");
+
             // Create and start listener
             Listener = new HttpListener();
             Listener.Prefixes.Add(listenerPrefix);
             Listener.Start();
 
             // Create and start connection acceptance and receive thread
-            ReceiveThread = new Thread(ReceiveThread_OnSpin) {
-                Priority = ThreadPriority.Lowest
+            AcceptThread = new Thread(AcceptThread_OnSpin) {
+                Priority = ThreadPriority.BelowNormal
             };
-            ReceiveThread.Start();
+            AcceptThread.Start();
         }
 
-        private async void ReceiveThread_OnSpin(Object obj) {
+        private async void AcceptThread_OnSpin(Object obj) {
             try {
                 // Loop until disposed
                 while(!IsDisposed) {
                     // Wait for inbound request
                     var listenerContext = await Listener.GetContextAsync();
+
+                    // Handle requests for client
+                    if(listenerContext.Request.Url.PathAndQuery == "/client.ts") {
+                        listenerContext.Response.StatusCode = 200;
+                        listenerContext.Response.StatusDescription = "OK";
+                        listenerContext.Response.ContentType = "application/typescript";
+                        listenerContext.Response.Close(ClientTypeScript, false);
+                        continue;
+                    }
+                    if(listenerContext.Request.Url.PathAndQuery == "/client.js") {
+                        listenerContext.Response.StatusCode = 200;
+                        listenerContext.Response.StatusDescription = "OK";
+                        listenerContext.Response.ContentType = "application/javascript";
+                        listenerContext.Response.Close(ClientJavaScript, false);
+                        continue;
+                    }
+
+                    // Favicon
+                    if(listenerContext.Request.Url.PathAndQuery == "/favicon.ico") {
+                        listenerContext.Response.StatusCode = 404;
+                        listenerContext.Response.StatusDescription = "Not found";
+                        listenerContext.Response.Close(ClientJavaScript, false);
+                        continue;
+                    }
+
+                    // Reject if not a websocket request
+                    if(!listenerContext.Request.IsWebSocketRequest) {
+                        listenerContext.Response.StatusCode = 426;
+                        listenerContext.Response.StatusDescription = "WebSocket required";
+                        listenerContext.Response.Close();
+                        continue;
+                    }
 
                     // Get channel list
                     var channelsStrings = listenerContext.Request.QueryString["channels"];
@@ -69,14 +110,6 @@ namespace InvertedTomato.WebPubSub {
                         channels.Add(channel);
                     }
 
-                    // Reject if not a websocket request
-                    if(!listenerContext.Request.IsWebSocketRequest) {
-                        listenerContext.Response.StatusCode = 426;
-                        listenerContext.Response.StatusDescription = "WebSocket required";
-                        listenerContext.Response.Close();
-                        continue;
-                    }
-
                     // TODO: reject if not secure?
                     // TODO: authentication
 
@@ -90,7 +123,7 @@ namespace InvertedTomato.WebPubSub {
                         listenerContext.Response.Close();
                         return;
                     }
-                    
+
                     // Create subscriber record
                     var subscriberId = (UInt64)(Interlocked.Increment(ref NextSubscriberId) - Int64.MinValue);
                     var subscriber = SubscriberRecords[subscriberId] = new SubscriberRecord() {
@@ -98,8 +131,8 @@ namespace InvertedTomato.WebPubSub {
                         Channels = channels.ToArray()
                     };
 
-                    StartReceiving(subscriberId, subscriber);
-                    StartSending(subscriberId, subscriber);
+                    Task.Run(async () => StartReceiving(subscriberId, subscriber));
+                    Task.Run(async () => StartSending(subscriberId, subscriber));
                 }
             } catch(ObjectDisposedException) { }
         }
@@ -222,7 +255,7 @@ namespace InvertedTomato.WebPubSub {
                 if(disposing) {
                     // Dispose managed state (managed objects)
                     Listener?.Close();
-                    ReceiveThread?.Join();
+                    AcceptThread?.Join();
                 }
 
                 // Set large fields to null

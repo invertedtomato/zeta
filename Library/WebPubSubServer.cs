@@ -59,6 +59,16 @@ namespace InvertedTomato.WebPubSub {
                     // Wait for inbound request
                     var listenerContext = await Listener.GetContextAsync();
 
+                    // Respond to options requests
+                    if(listenerContext.Request.HttpMethod == "OPTIONS") {
+                        listenerContext.Response.AddHeader("Access-Control-Allow-Headers", "Content-Type, Accept, X-Requested-With");
+                        listenerContext.Response.AddHeader("Access-Control-Allow-Methods", "GET");
+                        listenerContext.Response.AddHeader("Access-Control-Max-Age", "86400");
+                        listenerContext.Response.Close();
+                        continue;
+                    }
+                    listenerContext.Response.AppendHeader("Access-Control-Allow-Origin", "*");
+
                     // Handle requests for client
                     if(listenerContext.Request.Url.PathAndQuery == "/client.ts") {
                         listenerContext.Response.StatusCode = 200;
@@ -131,7 +141,7 @@ namespace InvertedTomato.WebPubSub {
                         Channels = channels.ToArray()
                     };
 
-                    Task.Run(async () => StartReceiving(subscriberId, subscriber));
+                    Task.Run(async () => StartReceiving(subscriberId, subscriber)); // TODO: Clean this up
                     Task.Run(async () => StartSending(subscriberId, subscriber));
                 }
             } catch(ObjectDisposedException) { }

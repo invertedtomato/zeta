@@ -19,7 +19,7 @@ namespace InvertedTomato.WebPubSub {
 
         private readonly HttpListener Listener;
         private readonly Thread AcceptThread;
-        private readonly ConcurrentDictionary<UInt64, TopicRecord> TopicRecords = new ConcurrentDictionary<UInt64, TopicRecord>();
+        private readonly ConcurrentDictionary<UInt32, TopicRecord> TopicRecords = new ConcurrentDictionary<UInt32, TopicRecord>();
         private readonly ConcurrentDictionary<UInt64, SubscriberRecord> SubscriberRecords = new ConcurrentDictionary<UInt64, SubscriberRecord>();
         private readonly Object Sync = new Object();
         private readonly Byte[] ClientTypeScript;
@@ -109,9 +109,9 @@ namespace InvertedTomato.WebPubSub {
                         listenerContext.Response.Close();
                         continue;
                     }
-                    var channels = new List<UInt64>();
+                    var channels = new List<UInt32>();
                     foreach(var channelString in channelsStrings.Split(',')) {
-                        if(!UInt64.TryParse(channelString, out var channel)) {
+                        if(!UInt32.TryParse(channelString, out var channel)) {
                             listenerContext.Response.StatusCode = 400;
                             listenerContext.Response.StatusDescription = $"Bad channel {channelString}";
                             listenerContext.Response.Close();
@@ -186,7 +186,7 @@ namespace InvertedTomato.WebPubSub {
 
         private async void StartSending(UInt64 subscriberId, SubscriberRecord subscriber) {
             try {
-                var lastRevisions = new Dictionary<UInt64, UInt64>(); // {topic} => {revision}
+                var lastRevisions = new Dictionary<UInt32, UInt32>(); // {topic} => {revision}
 
                 // Loop until disposed or closed
                 while(!IsDisposed && subscriber.Socket.State == WebSocketState.Open) {
@@ -212,7 +212,7 @@ namespace InvertedTomato.WebPubSub {
             }
         }
 
-        public void Publish<TMessage>(TMessage message, UInt64 topic = 0, UInt64 channel = 0) where TMessage : IMessage {
+        public void Publish<TMessage>(TMessage message, UInt32 topic = 0, UInt32 channel = 0) where TMessage : IMessage {
             // Handle un-publishes
             if(null == message) {
                 TopicRecords.TryRemove(topic, out var a);
@@ -240,9 +240,9 @@ namespace InvertedTomato.WebPubSub {
 
                 // Compose packet
                 var packet = new Byte[Constants.SERVERTXHEADER_LENGTH + payload.Count];
-                Buffer.BlockCopy(BitConverter.GetBytes(topic), 0, packet, 0, 8);             // UInt64 topic
-                Buffer.BlockCopy(BitConverter.GetBytes(record.Revision), 0, packet, 8, 8);   // UInt64 revision
-                Buffer.BlockCopy(payload.Array, payload.Offset, packet, 16, payload.Count);  // Byte[?] value
+                Buffer.BlockCopy(BitConverter.GetBytes(topic), 0, packet, 0, 4);             // UInt32 topic
+                Buffer.BlockCopy(BitConverter.GetBytes(record.Revision), 0, packet, 4, 4);   // UInt32 revision
+                Buffer.BlockCopy(payload.Array, payload.Offset, packet, 8, payload.Count);  // Byte[?] value
                 record.Packet = new ArraySegment<Byte>(packet);
 
                 // Release topic update

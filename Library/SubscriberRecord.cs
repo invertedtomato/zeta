@@ -7,7 +7,7 @@ using System.Threading;
 namespace InvertedTomato.WebPubSub {
     public class SubscriberRecord {
         public WebSocket Socket;
-        public UInt64[] Channels;
+        public UInt32[] Channels;
         public AutoResetEvent SendLock = new AutoResetEvent(false);
     }
 }

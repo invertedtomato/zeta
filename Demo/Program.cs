@@ -7,8 +7,8 @@ namespace InvertedTomato.WebPubSub {
     class Program {
         static void Main(String[] args) {
             //netsh http add urlacl url=http://*:8000/ user=Everyone
-            var revisions = new Dictionary<UInt64, UInt64>();
-            var values = new Dictionary<UInt64, String>();
+            var revisions = new Dictionary<UInt32, UInt32>();
+            var values = new Dictionary<UInt32, String>();
 
             var rnd = new Random();
             
@@ -21,7 +21,7 @@ namespace InvertedTomato.WebPubSub {
             Console.WriteLine("done");
 
             Console.Write("Subscribing client... ");
-            client.Subscribe((UInt64 topic, UInt64 revision, StringMessage message) => {
+            client.Subscribe((UInt32 topic, UInt32 revision, StringMessage message) => {
                 revisions[topic] = revision;
                 values[topic] = message.ToString();
                 Console.WriteLine($"  {topic}#{revision}: {message}");
@@ -36,7 +36,9 @@ namespace InvertedTomato.WebPubSub {
 
             for(var i = 2; i <= 50; i++) {
                 server.Publish(new StringMessage($"Topic 1, message {i}"), 1);
-                //Thread.Sleep(rnd.Next(0, 1000));
+                if(rnd.Next(0, 10) > 5) {
+                    Thread.Sleep(1);
+                }
             }
 
             Thread.Sleep(1000);

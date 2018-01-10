@@ -16,13 +16,13 @@ namespace InvertedTomato.WebPubSub {
         private readonly ClientWebSocket Socket;
 
         private readonly Object Sync = new Object();
-        private readonly List<HandlerRecord> Handlers = new List<HandlerRecord>();
+        private readonly List<HandlerRecord> HandlerRecords = new List<HandlerRecord>();
 
         public Boolean IsDisposed { get; private set; }
 
-        public WebPubSubClient(String endpoint) : this(endpoint, new UInt64[] { 0 }, new Byte[] { }) { }
-        public WebPubSubClient(String endpoint, UInt64[] channels) : this(endpoint, channels, new Byte[] { }) { }
-        public WebPubSubClient(String endpoint, UInt64[] channels, Byte[] authorization) {
+        public WebPubSubClient(String endpoint) : this(endpoint, new UInt32[] { 0 }, new Byte[] { }) { }
+        public WebPubSubClient(String endpoint, UInt32[] channels) : this(endpoint, channels, new Byte[] { }) { }
+        public WebPubSubClient(String endpoint, UInt32[] channels, Byte[] authorization) {
             if(null == endpoint) {
                 throw new ArgumentNullException(nameof(endpoint));
             }
@@ -81,30 +81,30 @@ namespace InvertedTomato.WebPubSub {
                     }
 
                     // Parse
-                    var topic = BitConverter.ToUInt64(buffer, 0);
-                    var revision = BitConverter.ToUInt64(buffer, 8);
+                    var topic = BitConverter.ToUInt32(buffer, 0);
+                    var revision = BitConverter.ToUInt32(buffer, 4);
 
                     // Get handler
-                    HandlerRecord selectedHandler = null;
+                    HandlerRecord selectedHandlerRecord = null;
                     lock(Sync) {
-                        foreach(var handler in Handlers) {
-                            if(handler.TopicLow <= topic && handler.TopicHigh >= topic) {
-                                selectedHandler = handler;
+                        foreach(var handlerRecord in HandlerRecords) {
+                            if(handlerRecord.TopicLow <= topic && handlerRecord.TopicHigh >= topic) {
+                                selectedHandlerRecord = handlerRecord;
                                 break;
                             }
                         }
                     }
-                    if(null == selectedHandler) {
+                    if(null == selectedHandlerRecord) {
                         Trace.TraceWarning($"RX: Unexpected topic {topic}#{revision}");
                         continue;
                     }
 
                     // Create message
-                    var message = (IMessage)Activator.CreateInstance(selectedHandler.MessageType);
-                    message.Import(new ArraySegment<Byte>(buffer, 16, result.Count - 16));
+                    var message = (IMessage)Activator.CreateInstance(selectedHandlerRecord.MessageType);
+                    message.Import(new ArraySegment<Byte>(buffer, 8, result.Count - 8));
 
                     // Raise handler
-                    selectedHandler.Handler.DynamicInvoke(topic, revision, message);
+                    selectedHandlerRecord.Handler.DynamicInvoke(topic, revision, message);
                 }
             } catch(ObjectDisposedException) {
             } catch(Exception e) {
@@ -114,13 +114,11 @@ namespace InvertedTomato.WebPubSub {
             }
         }
 
-        public void Subscribe<TMessage>(Action<UInt64, UInt64, TMessage> handler) {
-            Subscribe(handler, UInt64.MinValue, UInt64.MaxValue);
-        }
-        public void Subscribe<TMessage>(Action<UInt64, UInt64, TMessage> handler, UInt64 topic) {
+        public void Subscribe<TMessage>(Action<UInt32, UInt32, TMessage> handler) { Subscribe(handler, UInt32.MinValue, UInt32.MaxValue); }
+        public void Subscribe<TMessage>(Action<UInt32, UInt32, TMessage> handler, UInt32 topic) {
             Subscribe(handler, topic, topic);
         }
-        public void Subscribe<TMessage>(Action<UInt64, UInt64, TMessage> handler, UInt64 topicLow, UInt64 topicHigh) {
+        public void Subscribe<TMessage>(Action<UInt32, UInt32, TMessage> handler, UInt32 topicLow, UInt32 topicHigh) {
             if(null == handler) {
                 throw new ArgumentNullException(nameof(handler));
             }
@@ -133,12 +131,12 @@ namespace InvertedTomato.WebPubSub {
                     throw new ObjectDisposedException(string.Empty);
                 }
 
-                if(Handlers.Any(a => (a.TopicLow >= topicLow && a.TopicLow <= topicHigh) || (a.TopicHigh <= topicLow && a.TopicHigh >= topicHigh))) {
+                if(HandlerRecords.Any(a => (a.TopicLow >= topicLow && a.TopicLow <= topicHigh) || (a.TopicHigh <= topicLow && a.TopicHigh >= topicHigh))) {
                     throw new InvalidOperationException("There is already a handler covering this range, or part of this range of topics.");
                 }
 
                 // Add handler
-                Handlers.Add(new HandlerRecord() {
+                HandlerRecords.Add(new HandlerRecord() {
                     TopicHigh = topicHigh,
                     TopicLow = topicLow,
                     Handler = handler,

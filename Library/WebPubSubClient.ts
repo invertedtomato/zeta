@@ -1,5 +1,5 @@
 ﻿
-class WebPubSubClient {
+export class WebPubSubClient {
     private readonly SUBPROTOCOL = 'webpubsub';
     private readonly KEEPALIVE_INTERVAL = 10 * 1000;
     private readonly keepAlive: number;
@@ -7,8 +7,7 @@ class WebPubSubClient {
     private readonly handlerRecords: Array<HandlerRecord> = [];
 
     public isDisposed: boolean = false;
-
-    // TODO: keepalive
+    
     constructor(endpoint: string) {
         // Setup socket
         this.socket = new WebSocket(endpoint, this.SUBPROTOCOL);
@@ -58,13 +57,16 @@ class WebPubSubClient {
             throw new Error("Cannot be used while disposed.");
         }
 
+        // Handle overloads
         topicLow = topicLow || 0;
         topicHigh = topicHigh || topicLow;
 
+        // Check request sanity
         if (topicHigh < topicLow) {
             throw new Error("topicHigh less than topicLow");
         }
 
+        // Check for existing conflicting handler
         for (var x in this.handlerRecords) {
             let handlerRecord = this.handlerRecords[x];
 
@@ -73,8 +75,7 @@ class WebPubSubClient {
                 throw new Error("There is already a handler covering this range, or part of this range of topics.");
             }
         }
-
-
+        
         // Add handler
         this.handlerRecords.push({
             topicHigh,
@@ -95,10 +96,10 @@ class WebPubSubClient {
     }
 }
 
-interface Handler<TMessage> {
+export interface Handler<TMessage> {
     (topic: number, revision: number, message: TMessage): void;
 }
-interface IMessage {
+export interface IMessage {
     import(buffer: DataView): void;
     export(): DataView;
 }

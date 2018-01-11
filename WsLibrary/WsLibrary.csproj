@@ -4,6 +4,18 @@
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>InvertedTomato.WebPubSub</AssemblyName>
     <RootNamespace>InvertedTomato</RootNamespace>
+    <Description>No-nonsense, high performance pub-sub for distributing time-critical data over WebSockets.</Description>
+    <PackageId>InvertedTomato.Zeta.Ws</PackageId>
+    <Version>1.0.1</Version>
+    <Authors>InvertedTomato</Authors>
+    <Company>InvertedTomato</Company>
+    <Product>Zeta WebSockets</Product>
+    <PackageLicenseUrl>https://github.com/invertedtomato/zeta/blob/master/LICENSE</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/invertedtomato/zeta</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/invertedtomato/zeta</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>pubsub websockets socket performance</PackageTags>
+    <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
   </PropertyGroup>
 
   <ItemGroup>

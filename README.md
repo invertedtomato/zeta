@@ -14,7 +14,7 @@ server.Publish(new StringMessage("Message 4"));
 
 Create clients and subscribe to the data stream:
 ```c$
-var client = new ZetaClient<StringMessage>("127.0.0.1:1000", (topic, revision, payload) => { // Connect to localhost:1000
+var client = new ZetaUdpSubscriber<StringMessage>("127.0.0.1:1000", (topic, revision, payload) => { // Connect to localhost:1000
     Console.WriteLine($"Received value of '{payload.Value}'."); // Called every time an update arrives
 });
 ```

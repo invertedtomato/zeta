@@ -1,8 +1,10 @@
 UDP:
  * Add many subscriptions with different TMessages
+ * Add groups
  * Dynamic RTT detection, per client?
 
 WS:
+ * Fix unit tests
  * JavaScript client
  * SSL
  * Authorisation

@@ -8,8 +8,6 @@ using System.Diagnostics;
 using System.Collections.Generic;
 using InvertedTomato.IO.Messages;
 
-// TODO: search for TODOs. 
-
 namespace InvertedTomato.Net.Zeta {
     public class ZetaUdpPublisher<TMessage> : IDisposable where TMessage : IMessage {
         /// <summary>

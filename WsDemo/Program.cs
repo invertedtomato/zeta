@@ -3,7 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Threading;
 
-namespace InvertedTomato.WebPubSub {
+namespace InvertedTomato.Net.Zeta {
     class Program {
         static void Main(String[] args) {
             //netsh http add urlacl url=http://*:8000/ user=Everyone

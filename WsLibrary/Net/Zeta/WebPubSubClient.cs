@@ -7,7 +7,7 @@ using System.Threading;
 using System.Linq;
 using InvertedTomato.IO.Messages;
 
-namespace InvertedTomato.WebPubSub {
+namespace InvertedTomato.Net.Zeta {
     public class WebPubSubClient : IDisposable {
         private readonly String SubProtocol = "webpubsub";
         private readonly TimeSpan KeepAliveInterval = new TimeSpan(0, 0, 10);

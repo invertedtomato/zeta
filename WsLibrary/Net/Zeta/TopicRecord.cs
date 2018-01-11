@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace InvertedTomato.WebPubSub {
+namespace InvertedTomato.Net.Zeta {
     public class TopicRecord {
         public UInt32 Channel { get; set; }
         public UInt32 Revision { get; set; }

@@ -1,11 +1,11 @@
 using InvertedTomato.IO.Messages;
-using InvertedTomato.WebPubSub;
+using InvertedTomato.Net.Zeta;
 using System;
 using System.Collections.Generic;
 using System.Threading;
 using Xunit;
 
-namespace LibraryTests {
+namespace WsTests {
     public class EndToEndTests {
         [Fact]
         public void EndToEnd_AfterConnection_Basic() {

@@ -5,7 +5,7 @@ using System.Net;
 using System.Threading;
 using Xunit;
 
-namespace Tests {
+namespace UdpTests {
     public class Standard {
         [Fact]
         public void FullRun() {

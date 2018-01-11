@@ -1,0 +1,7 @@
+UDP:
+ * Dynamic RTT detection, per client?
+
+WS:
+ * JavaScript client
+ * SSL
+ * Authorisation

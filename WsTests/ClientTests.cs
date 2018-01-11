@@ -1,11 +1,11 @@
 ﻿using InvertedTomato.IO.Messages;
-using InvertedTomato.WebPubSub;
+using InvertedTomato.Net.Zeta;
 using System;
 using System.Collections.Generic;
 using System.Text;
 using Xunit;
 
-namespace LibraryTests {
+namespace WsTests {
     public class ClientTests {
         [Fact]
         public void Subscribe() {

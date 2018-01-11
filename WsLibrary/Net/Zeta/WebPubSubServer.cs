@@ -12,7 +12,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.IO;
 
-namespace InvertedTomato.WebPubSub {
+namespace InvertedTomato.Net.Zeta {
     public class WebPubSubServer : IDisposable {
         private readonly String SubProtocol = "webpubsub";
         private readonly TimeSpan KeepAliveInterval = new TimeSpan(0, 0, 10);

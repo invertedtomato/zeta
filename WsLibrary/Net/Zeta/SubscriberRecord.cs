@@ -4,7 +4,7 @@ using System.Net.WebSockets;
 using System.Text;
 using System.Threading;
 
-namespace InvertedTomato.WebPubSub {
+namespace InvertedTomato.Net.Zeta {
     public class SubscriberRecord {
         public WebSocket Socket;
         public UInt32[] Channels;

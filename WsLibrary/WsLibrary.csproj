@@ -3,7 +3,7 @@
   <PropertyGroup>
     <TargetFramework>netstandard2.0</TargetFramework>
     <AssemblyName>InvertedTomato.WebPubSub</AssemblyName>
-    <RootNamespace>InvertedTomato.WebPubSub</RootNamespace>
+    <RootNamespace>InvertedTomato</RootNamespace>
   </PropertyGroup>
 
   <ItemGroup>
@@ -12,10 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="WebPubSubClient.js">
+    <Content Include="Net\Zeta\WebPubSubClient.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="WebPubSubClient.ts">
+    <Content Include="Net\Zeta\WebPubSubClient.ts">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

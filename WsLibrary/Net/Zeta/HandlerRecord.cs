@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 
-namespace InvertedTomato.WebPubSub {
+namespace InvertedTomato.Net.Zeta {
     public class HandlerRecord {
         public UInt32 TopicLow;
         public UInt32 TopicHigh;

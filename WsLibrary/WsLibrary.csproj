@@ -12,10 +12,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Content Include="Net\Zeta\WebPubSubClient.js">
+    <Content Include="Net\Zeta\ZetaWsSubscriber.js">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="Net\Zeta\WebPubSubClient.ts">
+    <Content Include="Net\Zeta\ZetaWsSubscriber.ts">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

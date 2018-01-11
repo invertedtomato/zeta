@@ -13,11 +13,11 @@ namespace InvertedTomato.Net.Zeta {
             var rnd = new Random();
             
             Console.Write("Starting server... ");
-            var server = new WebPubSubServer("http://+:8000/");
+            var server = new ZetaWsPublisher("http://+:8000/");
             Console.WriteLine("done");
 
             Console.Write("Starting client... ");
-            var client = new WebPubSubClient("ws://localhost:8000/");
+            var client = new ZetaWsSubscriber("ws://localhost:8000/");
             Console.WriteLine("done");
 
             Console.Write("Subscribing client... ");

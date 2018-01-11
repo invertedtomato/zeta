@@ -10,7 +10,7 @@ using System.Globalization;
 using InvertedTomato.IO.Messages;
 
 namespace InvertedTomato.Net.Zeta {
-    public class ZetaClient<TMessage> : IDisposable where TMessage : IMessage, new() {
+    public class ZetaUdpSubscriber<TMessage> : IDisposable where TMessage : IMessage, new() {
         /// <summary>
         /// Server to communicate with
         /// </summary>
@@ -56,11 +56,11 @@ namespace InvertedTomato.Net.Zeta {
         /// </summary>
         public Boolean IsDisposed { get; private set; }
 
-        public ZetaClient(String server, Action<UInt64, UInt16, TMessage> handler) : this(ParseIPEndPoint(server), new Options(), handler) { }
+        public ZetaUdpSubscriber(String server, Action<UInt64, UInt16, TMessage> handler) : this(ParseIPEndPoint(server), new Options(), handler) { }
 
-        public ZetaClient(EndPoint server, Action<UInt64, UInt16, TMessage> handler) : this(server, new Options(), handler) { }
+        public ZetaUdpSubscriber(EndPoint server, Action<UInt64, UInt16, TMessage> handler) : this(server, new Options(), handler) { }
 
-        public ZetaClient(EndPoint server, Options options, Action<UInt64, UInt16, TMessage> handler) {
+        public ZetaUdpSubscriber(EndPoint server, Options options, Action<UInt64, UInt16, TMessage> handler) {
             if(null == server) {
                 throw new ArgumentNullException(nameof(server));
             }

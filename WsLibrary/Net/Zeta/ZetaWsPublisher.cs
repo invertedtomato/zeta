@@ -13,7 +13,7 @@ using System.Reflection;
 using System.IO;
 
 namespace InvertedTomato.Net.Zeta {
-    public class WebPubSubServer : IDisposable {
+    public class ZetaWsPublisher : IDisposable {
         private readonly String SubProtocol = "webpubsub";
         private readonly TimeSpan KeepAliveInterval = new TimeSpan(0, 0, 10);
 
@@ -30,15 +30,15 @@ namespace InvertedTomato.Net.Zeta {
 
         public Boolean IsDisposed { get; private set; }
 
-        public WebPubSubServer(String listenerPrefix) {
+        public ZetaWsPublisher(String listenerPrefix) {
             if(null == listenerPrefix) {
                 throw new ArgumentNullException(nameof(listenerPrefix));
             }
 
             // Load web client libraries
             var path = Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location);
-            ClientTypeScript = File.ReadAllBytes($"{path}/WebPubSubClient.ts");
-            ClientJavaScript = File.ReadAllBytes($"{path}/WebPubSubClient.js");
+            ClientTypeScript = File.ReadAllBytes($"{path}/Net/Zeta/ZetaWsSubscriber.ts");
+            ClientJavaScript = File.ReadAllBytes($"{path}/Net/Zeta/ZetaWsSubscriber.js");
 
             // Create and start listener
             Listener = new HttpListener();

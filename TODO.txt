@@ -1,4 +1,5 @@
 UDP:
+ * Add many subscriptions with different TMessages
  * Dynamic RTT detection, per client?
 
 WS:

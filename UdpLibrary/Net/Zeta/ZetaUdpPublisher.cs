@@ -11,7 +11,7 @@ using InvertedTomato.IO.Messages;
 // TODO: search for TODOs. 
 
 namespace InvertedTomato.Net.Zeta {
-    public class ZetaServer<TMessage> : IDisposable where TMessage : IMessage {
+    public class ZetaUdpPublisher<TMessage> : IDisposable where TMessage : IMessage {
         /// <summary>
         /// Are we disposed and no longer doing anything.
         /// </summary>
@@ -31,15 +31,15 @@ namespace InvertedTomato.Net.Zeta {
         private readonly AutoResetEvent SendLock = new AutoResetEvent(true);
         private readonly Object Sync = new Object();
         
-        public ZetaServer(UInt16 port) : this(new IPEndPoint(IPAddress.Any, port), new Options()) { }
-        public ZetaServer(EndPoint endpoint) : this(endpoint, new Options()) { }
+        public ZetaUdpPublisher(UInt16 port) : this(new IPEndPoint(IPAddress.Any, port), new Options()) { }
+        public ZetaUdpPublisher(EndPoint endpoint) : this(endpoint, new Options()) { }
 
         /// <summary>
         /// Create a new server.
         /// </summary>
         /// <param name="endpoint">IP and port to listen on</param>
         /// <param name="options">Custom options</param>
-        public ZetaServer(EndPoint endpoint, Options options) {
+        public ZetaUdpPublisher(EndPoint endpoint, Options options) {
             if(null == options) {
                 throw new ArgumentNullException(nameof(options));
             }

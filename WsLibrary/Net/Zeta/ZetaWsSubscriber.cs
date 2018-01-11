@@ -8,7 +8,7 @@ using System.Linq;
 using InvertedTomato.IO.Messages;
 
 namespace InvertedTomato.Net.Zeta {
-    public class WebPubSubClient : IDisposable {
+    public class ZetaWsSubscriber : IDisposable {
         private readonly String SubProtocol = "webpubsub";
         private readonly TimeSpan KeepAliveInterval = new TimeSpan(0, 0, 10);
         private readonly Int32 MaxMessageSize = 64 * 1024;
@@ -20,9 +20,9 @@ namespace InvertedTomato.Net.Zeta {
 
         public Boolean IsDisposed { get; private set; }
 
-        public WebPubSubClient(String endpoint) : this(endpoint, new UInt32[] { 0 }, new Byte[] { }) { }
-        public WebPubSubClient(String endpoint, UInt32[] channels) : this(endpoint, channels, new Byte[] { }) { }
-        public WebPubSubClient(String endpoint, UInt32[] channels, Byte[] authorization) {
+        public ZetaWsSubscriber(String endpoint) : this(endpoint, new UInt32[] { 0 }, new Byte[] { }) { }
+        public ZetaWsSubscriber(String endpoint, UInt32[] channels) : this(endpoint, channels, new Byte[] { }) { }
+        public ZetaWsSubscriber(String endpoint, UInt32[] channels, Byte[] authorization) {
             if(null == endpoint) {
                 throw new ArgumentNullException(nameof(endpoint));
             }

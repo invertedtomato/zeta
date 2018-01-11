@@ -11,9 +11,9 @@ namespace UdpTests {
         public void FullRun() {
             UInt32 expected = 0;
 
-            var server = new ZetaServer<BinaryMessage>(1000);
+            var server = new ZetaUdpPublisher<BinaryMessage>(1000);
 
-            var client = new ZetaClient<BinaryMessage>("127.0.0.1:1000", (topic, revision, payload) => {
+            var client = new ZetaUdpSubscriber<BinaryMessage>("127.0.0.1:1000", (topic, revision, payload) => {
                 Assert.Equal((UInt64)0, topic);
                 Assert.Equal(expected, revision);
                 Assert.Equal(expected, payload.Value[0]);

@@ -12,8 +12,8 @@ namespace WsTests {
             var revisions = new Dictionary<UInt32, UInt32>();
             var values = new Dictionary<UInt32, String>();
 
-            var server = new WebPubSubServer("http://+:8002/");
-            var client = new WebPubSubClient("ws://localhost:8002/");
+            var server = new ZetaWsPublisher("http://+:8002/");
+            var client = new ZetaWsSubscriber("ws://localhost:8002/");
             client.Subscribe((UInt32 topic, UInt32 revision, StringMessage message) => {
                 revisions[topic] = revision;
                 values[topic] = message.Value;
@@ -45,8 +45,8 @@ namespace WsTests {
             var revisions = new Dictionary<UInt32, UInt32>();
             var values = new Dictionary<UInt32, String>();
 
-            var server = new WebPubSubServer("http://+:8003/");
-            var client = new WebPubSubClient("ws://localhost:8003/");
+            var server = new ZetaWsPublisher("http://+:8003/");
+            var client = new ZetaWsSubscriber("ws://localhost:8003/");
             client.Subscribe((UInt32 topic, UInt32 revision, StringMessage message) => {
                 revisions[topic] = revision;
                 values[topic] = message.Value;
@@ -82,13 +82,13 @@ namespace WsTests {
             var revisions = new Dictionary<UInt32, UInt32>();
             var values = new Dictionary<UInt32, String>();
 
-            var server = new WebPubSubServer("http://+:8004/");
+            var server = new ZetaWsPublisher("http://+:8004/");
             server.Publish(new StringMessage("Topic 0, message 1"), 0);
             server.Publish(new StringMessage("Topic 1, message 1"), 1);
             server.Publish(new StringMessage("Topic 1, message 2"), 1);
             server.Publish(new StringMessage("Topic 2, message 1"), 2);
 
-            var client = new WebPubSubClient("ws://localhost:8004/");
+            var client = new ZetaWsSubscriber("ws://localhost:8004/");
             client.Subscribe((UInt32 topic, UInt32 revision, StringMessage message) => {
                 revisions[topic] = revision;
                 values[topic] = message.Value;
@@ -113,7 +113,7 @@ namespace WsTests {
             var revisions = new Dictionary<UInt32, UInt32>();
             var values = new Dictionary<UInt32, String>();
 
-            var server = new WebPubSubServer("http://+:8005/");
+            var server = new ZetaWsPublisher("http://+:8005/");
             server.Publish(new StringMessage("Topic 0, message 1"), 0);
             server.Publish(new StringMessage("Topic 1, message 1"), 1);
             server.Publish(new StringMessage("Topic 1, message 2"), 1);
@@ -122,7 +122,7 @@ namespace WsTests {
                 server.Publish(new StringMessage($"Topic 1, message {i}"), 1);
             }
 
-            var client = new WebPubSubClient("ws://localhost:8005/");
+            var client = new ZetaWsSubscriber("ws://localhost:8005/");
             client.Subscribe((UInt32 topic, UInt32 revision, StringMessage message) => {
                 revisions[topic] = revision;
                 values[topic] = message.Value;
@@ -147,8 +147,8 @@ namespace WsTests {
             var revisions = new Dictionary<UInt32, UInt32>();
             var values = new Dictionary<UInt32, String>();
 
-            var server = new WebPubSubServer("http://+:8006/");
-            var client = new WebPubSubClient("ws://localhost:8006/", new UInt32[] { 1 });
+            var server = new ZetaWsPublisher("http://+:8006/");
+            var client = new ZetaWsSubscriber("ws://localhost:8006/", new UInt32[] { 1 });
             client.Subscribe((UInt32 topic, UInt32 revision, StringMessage message) => {
                 revisions[topic] = revision;
                 values[topic] = message.Value;

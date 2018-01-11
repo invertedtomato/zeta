@@ -11,9 +11,9 @@ namespace Demo {
             var rnd = new Random();
             Trace.Listeners.Add(new Listener());
 
-            var server = new ZetaServer<StringMessage>(1000); // Listed on UDP port 1000
+            var server = new ZetaUdpPublisher<StringMessage>(1000); // Listed on UDP port 1000
 
-            var client = new ZetaClient<StringMessage>("127.0.0.1:1000", (topic, revision, payload) => {
+            var client = new ZetaUdpSubscriber<StringMessage>("127.0.0.1:1000", (topic, revision, payload) => {
                 Console.ForegroundColor = ConsoleColor.Gray;
                 Console.WriteLine($"> {topic}#{revision}={payload.Value}");
             });

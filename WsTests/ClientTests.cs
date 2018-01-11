@@ -9,8 +9,8 @@ namespace WsTests {
     public class ClientTests {
         [Fact]
         public void Subscribe() {
-            var server = new WebPubSubServer("http://+:8001/");
-            var client = new WebPubSubClient("ws://localhost:8001/");
+            var server = new ZetaWsPublisher("http://+:8001/");
+            var client = new ZetaWsSubscriber("ws://localhost:8001/");
 
             client.Subscribe((UInt32 topic, UInt32 revision, StringMessage message) => { }, 10, 20);
             client.Subscribe((UInt32 topic, UInt32 revision, StringMessage message) => { }, 0, 9);

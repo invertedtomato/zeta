@@ -6,6 +6,7 @@ MinimumVisualStudioVersion = 10.0.40219.1
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{695A146A-7932-4037-BE99-CF9A71EF83B5}"
 	ProjectSection(SolutionItems) = preProject
 		README.md = README.md
+		TODO.txt = TODO.txt
 	EndProjectSection
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UdpLibrary", "UdpLibrary\UdpLibrary.csproj", "{8E6B39AB-FADC-44C7-A7DC-FA6680CD88E9}"

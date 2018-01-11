@@ -1,0 +1,6 @@
+﻿netsh http add urlacl url=http://+:8001/ user=Everyone
+netsh http add urlacl url=http://+:8002/ user=Everyone
+netsh http add urlacl url=http://+:8003/ user=Everyone
+netsh http add urlacl url=http://+:8004/ user=Everyone
+netsh http add urlacl url=http://+:8005/ user=Everyone
+netsh http add urlacl url=http://+:8006/ user=Everyone

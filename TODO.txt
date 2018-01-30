@@ -8,3 +8,19 @@ WS:
  * JavaScript client
  * SSL
  * Authorisation
+
+
+ Message => Feather
+
+
+ class Zeta??Publisher : IDisposable{
+	public async void Publish<TMessage>(TMessage message);
+	public async void Publish<TMessage>(TMessage message, UInt32 topic);
+	public async void Publish<TMessage>(TMessage message, UInt32 topic, UInt32 channel);
+ }
+
+ class Zeta??Subscriber : IDisposable{
+	public async TMessage Receive<TMessage>();
+	public async TMessage Receive<TMessage>(out UInt32 topic);
+
+ }

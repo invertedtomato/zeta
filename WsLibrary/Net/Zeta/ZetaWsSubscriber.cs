@@ -100,7 +100,7 @@ namespace InvertedTomato.Net.Zeta {
                     }
 
                     // Create message
-                    var message = (IMessage)Activator.CreateInstance(selectedHandlerRecord.MessageType);
+                    var message = (IImportableMessage)Activator.CreateInstance(selectedHandlerRecord.MessageType);
                     message.Import(new ArraySegment<Byte>(buffer, 8, result.Count - 8));
 
                     // Raise handler

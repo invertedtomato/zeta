@@ -9,7 +9,7 @@ using System.Collections.Generic;
 using InvertedTomato.IO.Messages;
 
 namespace InvertedTomato.Net.Zeta {
-    public class ZetaUdpPublisher<TMessage> : IDisposable where TMessage : IMessage {
+    public class ZetaUdpPublisher<TMessage> : IDisposable where TMessage : IExportableMessage {
         /// <summary>
         /// Are we disposed and no longer doing anything.
         /// </summary>

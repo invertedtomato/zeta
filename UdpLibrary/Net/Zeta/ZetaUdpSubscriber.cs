@@ -10,7 +10,7 @@ using System.Globalization;
 using InvertedTomato.IO.Messages;
 
 namespace InvertedTomato.Net.Zeta {
-    public class ZetaUdpSubscriber<TMessage> : IDisposable where TMessage : IMessage, new() {
+    public class ZetaUdpSubscriber<TMessage> : IDisposable where TMessage : IImportableMessage, new() {
         /// <summary>
         /// Server to communicate with
         /// </summary>

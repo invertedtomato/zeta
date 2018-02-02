@@ -212,7 +212,7 @@ namespace InvertedTomato.Net.Zeta {
             }
         }
 
-        public void Publish<TMessage>(TMessage message, UInt32 topic = 0, UInt32 channel = 0) where TMessage : IMessage {
+        public void Publish<TMessage>(TMessage message, UInt32 topic = 0, UInt32 channel = 0) where TMessage : IExportableMessage {
             // Handle un-publishes
             if(null == message) {
                 TopicRecords.TryRemove(topic, out var a);

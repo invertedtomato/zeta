@@ -6,7 +6,7 @@
     <RootNamespace>InvertedTomato</RootNamespace>
     <Description>No-nonsense, high performance pub-sub for distributing time-critical data over WebSockets.</Description>
     <PackageId>InvertedTomato.Zeta.Ws</PackageId>
-    <Version>1.0.1</Version>
+    <Version>1.0.2</Version>
     <Authors>InvertedTomato</Authors>
     <Company>InvertedTomato</Company>
     <Product>Zeta WebSockets</Product>
@@ -33,7 +33,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="InvertedTomato.Messages" Version="1.0.3" />
+    <PackageReference Include="InvertedTomato.Messages" Version="1.1.0" />
   </ItemGroup>
 
 </Project>

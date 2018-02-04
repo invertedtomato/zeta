@@ -325,6 +325,8 @@ namespace InvertedTomato.Net.Zeta {
                 }
                 Socket?.Shutdown(SocketShutdown.Both);
                 Socket?.Dispose();
+
+                IsStarted = false;
             }
 
             // Free unmanaged resources (unmanaged objects) and override a finalizer below

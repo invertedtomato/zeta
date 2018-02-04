@@ -10,5 +10,15 @@ namespace UdpTests {
             server.Dispose();
             Assert.True(server.IsDisposed);
         }
+        
+        [Fact]
+        public void Starting() {
+            var server = new ZetaUdpPublisher();
+            Assert.False(server.IsStarted);
+            server.Start(56789);
+            Assert.True(server.IsStarted);
+            server.Dispose();
+            Assert.False(server.IsStarted);
+        }
     }
 }

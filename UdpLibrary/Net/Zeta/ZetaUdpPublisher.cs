@@ -363,6 +363,8 @@ namespace InvertedTomato.Net.Zeta {
                     }
                     Socket?.Shutdown(SocketShutdown.Both);
                     Socket?.Dispose();
+
+                    IsStarted = false;
                 }
 
                 // Set large fields to null

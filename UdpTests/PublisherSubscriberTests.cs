@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 using Xunit;
 
 namespace UdpTests {
-    public class Standard {
+    public class PublisherSubscriberTests {
         [Fact]
         public void FullRun() {
             Byte expected = 0;

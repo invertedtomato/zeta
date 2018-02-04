@@ -13,8 +13,8 @@ namespace Demo {
             Trace.Listeners.Add(new Listener());
 
             // Start server
-            var server = new ZetaUdpPublisher(); // Listed on UDP port 1000
-            server.Start(1000);
+            var server = new ZetaUdpPublisher(); 
+            server.Start(1000); // Listed on UDP port 1000
 
             // Start client
             var client = new ZetaUdpSubscriber();
